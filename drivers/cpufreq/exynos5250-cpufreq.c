@@ -23,7 +23,7 @@
 #include <mach/asv-exynos.h>
 #include <mach/exynos5_bus.h>
 
-#define CPUFREQ_LEVEL_END	(L15 + 1)
+#define CPUFREQ_LEVEL_END	(L20 + 1)
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -43,27 +43,36 @@ struct cpufreq_clkdiv {
 static unsigned int exynos5250_volt_table[CPUFREQ_LEVEL_END];
 
 static struct cpufreq_frequency_table exynos5250_freq_table[] = {
-	{L0, 1700 * 1000},
-	{L1, 1600 * 1000},
-	{L2, 1500 * 1000},
-	{L3, 1400 * 1000},
-	{L4, 1300 * 1000},
-	{L5, 1200 * 1000},
-	{L6, 1100 * 1000},
-	{L7, 1000 * 1000},
-	{L8, 900 * 1000},
-	{L9, 800 * 1000},
-	{L10, 700 * 1000},
-	{L11, 600 * 1000},
-	{L12, 500 * 1000},
-	{L13, 400 * 1000},
-	{L14, 300 * 1000},
-	{L15, 200 * 1000},
+	{L0, 2100 * 1000},
+	{L1, 2000 * 1000},
+	{L2, 1900 * 1000},
+	{L3, 1800 * 1000},
+	{L4, 1700 * 1000},
+	{L5, 1600 * 1000},
+	{L6, 1500 * 1000},
+	{L7, 1400 * 1000},
+	{L8, 1300 * 1000},
+	{L9, 1200 * 1000},
+	{L10, 1100 * 1000},
+	{L11, 1000 * 1000},
+	{L12, 900 * 1000},
+	{L13, 800 * 1000},
+	{L14, 700 * 1000},
+	{L15, 600 * 1000},
+	{L16, 500 * 1000},
+	{L17, 400 * 1000},
+	{L18, 300 * 1000},
+	{L19, 200 * 1000},
+	{L20, 100 * 1000},
 	{0, CPUFREQ_TABLE_END},
 };
 
 /* Minimum memory throughput in megabytes per second */
 static int exynos5250_bus_table[CPUFREQ_LEVEL_END] = {
+	933000, /* 2.1 GHz */
+	933000, /* 2.0 GHz */
+	933000, /* 1.9 GHz */
+	933000, /* 1.8 GHz */
 	800000, /* 1.7 GHz */
 	800000, /* 1.6 GHz */
 	800000, /* 1.5 GHz */
@@ -80,6 +89,7 @@ static int exynos5250_bus_table[CPUFREQ_LEVEL_END] = {
 	0,  /* 400 MHz */
 	0,  /* 300 MHz */
 	0,    /* 200 MHz */
+	0,    /* 100 MHz */
 };
 
 static int __init set_volt_table(void)
@@ -158,9 +168,9 @@ int __init exynos5250_cpufreq_init(struct exynos_dvfs_info *info)
 
 	info->mpll_freq_khz = rate;
 	/* 1000Mhz */
-	info->pm_lock_idx = L7;
+	info->pm_lock_idx = L11;
 	/* 800Mhz */
-	info->pll_safe_idx = L9;
+	info->pll_safe_idx = L13;
 	info->max_support_idx = max_support_idx;
 	info->min_support_idx = min_support_idx;
 	info->cpu_clk = cpu_clk;

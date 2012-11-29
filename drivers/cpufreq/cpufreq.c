@@ -960,6 +960,12 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
+
+	if (policy->min < 200000)
+		policy->min = 200000;
+	if (policy->max > 1700000)
+		policy->max = 1700000;
+
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
 
