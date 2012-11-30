@@ -8,11 +8,12 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#include <linux/cpufreq.h>
 
 #ifndef __ASM_ARCH_EXYNOS5250_ASV_H
 #define __ASM_ARCH_EXYNOS5250_ASV_H __FILE__
 
-#define ARM_DVFS_LEVEL_NR		21
+#define ARM_DVFS_LEVEL_NR		FREQ_STEPS
 #define ARM_ASV_GRP_NR			12
 #define INT_DVFS_LEVEL_NR		5
 #define INT_ASV_GRP_NR			12

@@ -23,7 +23,7 @@
 #include <mach/asv-exynos.h>
 #include <mach/exynos5_bus.h>
 
-#define CPUFREQ_LEVEL_END	(L20 + 1)
+#define CPUFREQ_LEVEL_END	(FREQ_STEPS)
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -91,6 +91,11 @@ static int exynos5250_bus_table[CPUFREQ_LEVEL_END] = {
 	0,    /* 200 MHz */
 	0,    /* 100 MHz */
 };
+
+void hlpr_set_volt_tablee5(unsigned int i, unsigned int val)
+{
+	exynos5250_volt_table[i] = val;
+}
 
 static int __init set_volt_table(void)
 {

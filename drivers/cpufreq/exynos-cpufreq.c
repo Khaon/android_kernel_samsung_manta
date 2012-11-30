@@ -56,6 +56,11 @@ int exynos_verify_speed(struct cpufreq_policy *policy)
 					      exynos_info->freq_table);
 }
 
+void hlpr_set_volt_tablee(unsigned int i, unsigned int val)
+{
+	exynos_info->volt_table[i] = val;
+}
+
 unsigned int exynos_getspeed(unsigned int cpu)
 {
 	return clk_get_rate(exynos_info->cpu_clk) / 1000;

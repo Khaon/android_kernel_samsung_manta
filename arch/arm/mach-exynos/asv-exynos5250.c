@@ -53,6 +53,9 @@
 
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
 
+#define MAX_VDD_SC		1400000 /* uV */
+#define MIN_VDD_SC		 700000 /* uV */
+
 enum exynos5250_fused_vol_lock_t {
 	FUSED_MIF_VOL_LOCK = 0,
 	FUSED_INT_VOL_LOCK,
@@ -182,6 +185,55 @@ unsigned int exynos5250_get_volt(enum asv_type_id target_type, unsigned int targ
 	}
 
 	return exynos5250_default_asv_max_volt[target_type];
+}
+
+ssize_t hlpr_exynos5250_get_volt(char *buf, int isApp)
+{
+	int i, len = 0;
+
+	if (buf) {
+		if (isApp == 0)
+		{
+			for (i = 0; i < dvfs_level_nr[ID_ARM]; i++)
+				len += sprintf(buf + len, "%8u: %8d\n", volt_table[ID_ARM][i][0], volt_table[ID_ARM][i][1] );
+		}
+		else
+		{
+			for (i = 0; i < dvfs_level_nr[ID_ARM]; i++)
+				len += sprintf(buf + len, "%dmhz: %d mV\n", volt_table[ID_ARM][i][0]/1000,volt_table[ID_ARM][i][1]/1000);
+		}
+	}
+	return len;
+}
+
+extern void hlpr_set_volt_tablee(unsigned int i, unsigned int val);
+extern void hlpr_set_volt_tablee5(unsigned int i, unsigned int val);
+
+void hlpr_exynos5250_set_volt(int cnt, int vdd_uv[])
+{
+	int i;
+	int j=0;
+
+	if (vdd_uv[0] > vdd_uv[cnt-1])
+	{
+		for (i = 0; i < cnt; i++) {
+		    if ((vdd_uv[i]*1000) >= MIN_VDD_SC && (vdd_uv[i]*1000) <= MAX_VDD_SC)
+			volt_table[ID_ARM][i][1] = vdd_uv[i]*1000;
+			hlpr_set_volt_tablee(i, vdd_uv[i]*1000);
+			hlpr_set_volt_tablee5(i, vdd_uv[i]*1000);
+		}
+	}
+	else
+	{
+		j = cnt-1;
+		for (i = 0; i < cnt; i++) {
+		    if ((vdd_uv[j]*1000) >= MIN_VDD_SC && (vdd_uv[j]*1000) <= MAX_VDD_SC)
+			volt_table[ID_ARM][i][1] = vdd_uv[j]*1000;
+			hlpr_set_volt_tablee(i, vdd_uv[j]*1000);
+			hlpr_set_volt_tablee5(i, vdd_uv[j]*1000);
+		    j--;
+		}
+	}
 }
 
 unsigned int exynos5250_set_volt(enum asv_type_id target_type,

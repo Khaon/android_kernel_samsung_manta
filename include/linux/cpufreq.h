@@ -127,6 +127,7 @@ struct cpufreq_policy {
 #define CPUFREQ_SUSPENDCHANGE	(9)
 #define GLOBALKT_MIN_FREQ_LIMIT 200000
 #define GLOBALKT_MAX_FREQ_LIMIT 1700000
+#define FREQ_STEPS		21
 
 struct cpufreq_freqs {
 	unsigned int cpu;	/* cpu nr */
