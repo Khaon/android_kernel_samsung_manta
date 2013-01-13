@@ -609,6 +609,12 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 	return count;
 }
 
+extern unsigned int get_cur_gpu_freq();
+ssize_t show_scaling_cur_freq_gpu(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", get_cur_gpu_freq());
+}
+
 cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0400);
 cpufreq_freq_attr_ro(cpuinfo_min_freq);
 cpufreq_freq_attr_ro(cpuinfo_max_freq);
@@ -616,6 +622,7 @@ cpufreq_freq_attr_ro(cpuinfo_transition_latency);
 cpufreq_freq_attr_ro(scaling_available_governors);
 cpufreq_freq_attr_ro(scaling_driver);
 cpufreq_freq_attr_ro(scaling_cur_freq);
+cpufreq_freq_attr_ro(scaling_cur_freq_gpu);
 cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
@@ -631,6 +638,7 @@ static struct attribute *default_attrs[] = {
 	&cpuinfo_transition_latency.attr,
 	&scaling_min_freq.attr,
 	&scaling_max_freq.attr,
+	&scaling_cur_freq_gpu.attr,
 	&affected_cpus.attr,
 	&related_cpus.attr,
 	&scaling_governor.attr,
