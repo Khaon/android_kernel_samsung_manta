@@ -146,7 +146,7 @@ static struct s3c_fb_pd_win manta_fb_win2 = {
 	.virtual_x		= 2560,
 	.virtual_y		= 1600 * 2,
 	.max_bpp		= 32,
-	.default_bpp		= 24,
+	.default_bpp		= 32,
 	.width			= 218,
 	.height			= 136,
 };
@@ -173,9 +173,9 @@ static struct video_info manta_dp_config = {
 	.interlaced		= 0,
 
 	.color_space		= COLOR_RGB,
-	.dynamic_range		= VESA,
-	.ycbcr_coeff		= COLOR_YCBCR601,
-	.color_depth		= COLOR_8,
+	.dynamic_range		= CEA,
+	.ycbcr_coeff		= COLOR_YCBCR709,
+	.color_depth		= COLOR_10,
 
 	.link_rate		= LINK_RATE_2_70GBPS,
 	.lane_count		= LANE_COUNT4,
