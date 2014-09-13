@@ -628,7 +628,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	/* Check for frequency increase */
 	if (max_load > dbs_tuners_ins.up_threshold) {
 		Lblock_cycles_raise++;
-		if ( Lblock_cycles_raise >= dbs_tuners_ins.block_cycles_raise)
+		if ( Lblock_cycles_raise > dbs_tuners_ins.block_cycles_raise)
 		 {
 			/* if we are already at full speed then break out early */
 			if (this_dbs_info->requested_freq == policy->max){
