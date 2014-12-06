@@ -702,7 +702,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 }
 
-static void hotplug_offline_work_fn(struct work_struct *work)
+static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
 {
 	int cpu;
 	//pr_info("ENTER OFFLINE");
@@ -715,7 +715,7 @@ static void hotplug_offline_work_fn(struct work_struct *work)
 	}
 }
 
-static void hotplug_online_work_fn(struct work_struct *work)
+static void __cpuinit hotplug_online_work_fn(struct work_struct *work)
 {
 	int cpu;
 	//pr_info("ENTER ONLINE");
