@@ -23,6 +23,8 @@
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
+#include <linux/input.h>
+#include <linux/slab.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -36,6 +38,9 @@
 #define DEF_DISABLE_HOTPLUGGING			(0)
 #define DEF_UP_FREQ_THRESHOLD_HOTPLUG 		(1200000)
 #define DEF_DOWN_FREQ_THRESHOLD_HOTPLUG 	(800000)
+#define DEF_BOOST_CPU				(800000)
+#define DEF_BOOST_CPU_TURN_ON_2ND_CORE		(1)
+#define DEF_BOOST_HOLD_CYCLES			(5)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -56,11 +61,23 @@ static unsigned int Lblock_cycles_offline = 0;
 static unsigned int Lblock_cycles_raise = 0;
 static unsigned int Lblock_cycles_reduce = 0;
 
+static bool boostpulse_relayf = false;
+static unsigned int boost_hold_cycles_cnt = 0;
+
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
+
+#define MIN_TIME_INTERVAL_US (250 * USEC_PER_MSEC)
+
+/*
+ * Use this variable in your governor of choice to calculate when the cpufreq
+ * core is allowed to ramp the cpu down after an input event. That logic is done
+ * by you, this var only outputs the last time in us an event was captured
+ */
+static u64 last_input_time = 0;
 
 struct work_struct hotplug_offline_work;
 struct work_struct hotplug_online_work;
@@ -104,6 +121,9 @@ static struct dbs_tuners {
 	unsigned int block_cycles_offline;
 	unsigned int block_cycles_raise;
 	unsigned int block_cycles_reduce;
+	unsigned int boost_cpu;
+	unsigned int boost_turn_on_2nd_core;
+	unsigned int block_cycles_boost;
 	unsigned int disable_hotplugging;
 	unsigned int ignore_nice;
 	unsigned int freq_step_up;
@@ -119,6 +139,9 @@ static struct dbs_tuners {
 	.block_cycles_offline=25,
 	.block_cycles_raise=2,
 	.block_cycles_reduce=1,
+	.boost_cpu = DEF_BOOST_CPU,
+	.boost_turn_on_2nd_core = DEF_BOOST_CPU_TURN_ON_2ND_CORE,
+	.block_cycles_boost = DEF_BOOST_HOLD_CYCLES,
 	.disable_hotplugging = DEF_DISABLE_HOTPLUGGING,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.ignore_nice = 0,
@@ -207,6 +230,12 @@ static ssize_t show_down_freq_threshold_hotplug(struct kobject *kobj,
 	return sprintf(buf, "%u\n", dbs_tuners_ins.down_freq_threshold_hotplug/ 1000);
 }
 
+static ssize_t show_boost_cpu(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", dbs_tuners_ins.boost_cpu / 1000);
+}
+
 /* cpufreq_ktoonservative Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
@@ -226,6 +255,8 @@ show_one(block_cycles_online, block_cycles_online);
 show_one(block_cycles_offline, block_cycles_offline);
 show_one(block_cycles_raise, block_cycles_raise);
 show_one(block_cycles_reduce, block_cycles_reduce);
+show_one(block_cycles_boost,block_cycles_boost);
+show_one(boost_turn_on_2nd_core, boost_turn_on_2nd_core);
 show_one(freq_step_down, freq_step_down);
 show_one(freq_step_up, freq_step_up);
 
@@ -350,6 +381,54 @@ static ssize_t store_down_freq_threshold_hotplug(struct kobject *a, struct attri
 	dbs_tuners_ins.down_freq_threshold_hotplug = input * 1000;
 	return count;
 }
+
+static ssize_t store_boost_cpu(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input * 1000 > 2100000)
+		input = 2100000;
+	if (input * 1000 < 0)
+		input = 0;
+	dbs_tuners_ins.boost_cpu = input * 1000;
+	return count;
+}
+
+static ssize_t store_boost_turn_on_2nd_core(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1)
+		input = 0;
+
+	dbs_tuners_ins.boost_turn_on_2nd_core = input;
+	return count;
+}
+
+static ssize_t store_block_cycles_boost(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 11 otherwise freq will not fall */
+	if (input < 0)
+		return -EINVAL;
+
+	dbs_tuners_ins.block_cycles_boost = input;
+	return count;
+}
+
 
 static ssize_t store_block_cycles_online(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
@@ -504,6 +583,9 @@ define_one_global_rw(block_cycles_online);
 define_one_global_rw(block_cycles_offline);
 define_one_global_rw(block_cycles_raise);
 define_one_global_rw(block_cycles_reduce);
+define_one_global_rw(boost_cpu);
+define_one_global_rw(boost_turn_on_2nd_core);
+define_one_global_rw(block_cycles_boost);
 define_one_global_rw(disable_hotplugging);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(freq_step_down);
@@ -522,6 +604,9 @@ static struct attribute *dbs_attributes[] = {
 	&block_cycles_reduce.attr,
 	&block_cycles_online.attr,
 	&block_cycles_offline.attr,
+	&boost_cpu.attr,
+	&boost_turn_on_2nd_core,
+	&block_cycles_boost.attr,
 	&disable_hotplugging.attr,
 	&ignore_nice_load.attr,
 	&freq_step_down.attr,
@@ -548,6 +633,28 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	unsigned int j;
 
 	policy = this_dbs_info->cur_policy;
+
+	if (boostpulse_relayf)
+	{
+		
+		if (boost_hold_cycles_cnt >= dbs_tuners_ins.block_cycles_boost)
+		{
+			boostpulse_relayf = false;
+			boost_hold_cycles_cnt = 0;
+            return;
+		}
+		boost_hold_cycles_cnt++;
+
+		this_dbs_info->down_skip = 0;
+		/* if we are already at full speed then break out early */
+		if (this_dbs_info->requested_freq == policy->max || policy->cur >= dbs_tuners_ins.boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.boost_cpu)
+			return;
+
+		this_dbs_info->requested_freq = dbs_tuners_ins.boost_cpu;
+		__cpufreq_driver_target(policy, this_dbs_info->requested_freq,
+			CPUFREQ_RELATION_H);
+		return;
+	}
 
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
@@ -629,7 +736,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	if (max_load > dbs_tuners_ins.up_threshold) {
 		Lblock_cycles_raise++;
 		if ( Lblock_cycles_raise > dbs_tuners_ins.block_cycles_raise)
-		 {
+		{
 			/* if we are already at full speed then break out early */
 			if (this_dbs_info->requested_freq == policy->max){
 				Lblock_cycles_raise = 0;
@@ -701,6 +808,100 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		return;
 	}
 }
+
+void boostpulse_relay_kt(void)
+{
+	if (!boostpulse_relayf)
+	{
+		if (num_online_cpus() < 2 && dbs_tuners_ins.boost_turn_on_2nd_core)
+			schedule_work_on(0, &hotplug_online_work);
+		else if (dbs_tuners_ins.boost_turn_on_2nd_core == 0 && dbs_tuners_ins.boost_cpu == 0)
+			return;
+
+		boostpulse_relayf = true;
+		boost_hold_cycles_cnt = 0;
+	}
+	else
+	{
+		boost_hold_cycles_cnt = 0;
+	}
+}
+
+static void boost_input_event(struct input_handle *handle,
+                unsigned int type, unsigned int code, int value)
+{
+	u64 now;
+
+	if (type == EV_ABS && code == ABS_MT_TRACKING_ID) {
+		now = ktime_to_us(ktime_get());
+
+		if (now - last_input_time < MIN_TIME_INTERVAL_US)
+			return;
+
+    boostpulse_relay_kt();
+		last_input_time = ktime_to_us(ktime_get());
+	}
+}
+
+static int boost_input_connect(struct input_handler *handler,
+                struct input_dev *dev, const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int error;
+
+	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
+	if (handle == NULL)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = handler->name;
+
+	error = input_register_handle(handle);
+	if (error)
+		goto err;
+
+	error = input_open_device(handle);
+        if (error) {
+                input_unregister_handle(handle);
+		goto err;
+	}
+
+	return 0;
+
+err:
+	kfree(handle);
+	return error;
+}
+
+static void boost_input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id boost_ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		/* assumption: MT_.._X & MT_.._Y are in the same long */
+		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
+				BIT_MASK(ABS_MT_POSITION_X) |
+				BIT_MASK(ABS_MT_POSITION_Y) },
+	},
+	{ },
+};
+
+static struct input_handler boost_input_handler = {
+	.event          = boost_input_event,
+	.connect        = boost_input_connect,
+	.disconnect     = boost_input_disconnect,
+	.name           = "ktoonservative-boost",
+	.id_table       = boost_ids,
+};
+
 
 static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
 {
@@ -817,7 +1018,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				return rc;
 			}
 
-			dbs_tuners_ins.sampling_rate = 22500;
+			dbs_tuners_ins.sampling_rate = 35000;
 				//max((min_sampling_rate * 20),
 				    //latency * LATENCY_MULTIPLIER);
 
@@ -825,6 +1026,8 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					&dbs_cpufreq_notifier_block,
 					CPUFREQ_TRANSITION_NOTIFIER);
 		}
+	  if (input_register_handler(&boost_input_handler))
+        pr_info("Unable to register the input handler\n");
 		mutex_unlock(&dbs_mutex);
 
 		dbs_timer_init(this_dbs_info);
@@ -837,7 +1040,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		mutex_lock(&dbs_mutex);
 		dbs_enable--;
 		mutex_destroy(&this_dbs_info->timer_mutex);
-
+	  input_unregister_handler(&boost_input_handler);
 		/*
 		 * Stop the timerschedule work, when this governor
 		 * is used for first time
