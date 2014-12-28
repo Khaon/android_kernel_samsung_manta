@@ -2680,7 +2680,7 @@ static void bfq_init_prio_data(struct bfq_queue *bfqq, struct io_context *ioc)
 	switch (ioprio_class) {
 	default:
 		dev_err(bfqq->bfqd->queue->backing_dev_info.dev,
-			"bfq: bad prio %x\n", ioprio_class);
+			"bfq: bad prio class %d\n", ioprio_class);
 	case IOPRIO_CLASS_NONE:
 		/*
 		 * No prio set, inherit CPU scheduling settings.
@@ -2701,6 +2701,13 @@ static void bfq_init_prio_data(struct bfq_queue *bfqq, struct io_context *ioc)
 		bfqq->entity.new_ioprio = 7;
 		bfq_clear_bfqq_idle_window(bfqq);
 		break;
+	}
+
+	if (bfqq->entity.new_ioprio < 0 ||
+	    bfqq->entity.new_ioprio >= IOPRIO_BE_NR) {
+		printk(KERN_CRIT "bfq_init_prio_data: new_ioprio %d\n",
+				 bfqq->entity.new_ioprio);
+		BUG();
 	}
 
 	bfqq->entity.ioprio_changed = 1;
@@ -2814,14 +2821,13 @@ retry:
 
 		if (bfqq != NULL) {
 			bfq_init_bfqq(bfqd, bfqq, current->pid, is_sync);
+			bfq_init_prio_data(bfqq, ioc);
+			bfq_init_entity(&bfqq->entity, bfqg);
 			bfq_log_bfqq(bfqd, bfqq, "allocated");
 		} else {
 			bfqq = &bfqd->oom_bfqq;
 			bfq_log_bfqq(bfqd, bfqq, "using oom bfqq");
 		}
-
-		bfq_init_prio_data(bfqq, ioc);
-		bfq_init_entity(&bfqq->entity, bfqg);
 	}
 
 	if (new_bfqq != NULL)
@@ -3469,6 +3475,14 @@ static void *bfq_init_queue(struct request_queue *q)
 	 */
 	bfq_init_bfqq(bfqd, &bfqd->oom_bfqq, 1, 0);
 	atomic_inc(&bfqd->oom_bfqq.ref);
+	bfqd->oom_bfqq.entity.new_ioprio = BFQ_DEFAULT_QUEUE_IOPRIO;
+	bfqd->oom_bfqq.entity.new_ioprio_class = IOPRIO_CLASS_BE;
+	/*
+	 * Trigger weight initialization, according to ioprio, at the
+	 * oom_bfqq's first activation. The oom_bfqq's ioprio and ioprio
+	 * class won't be changed any more.
+	 */
+	bfqd->oom_bfqq.entity.ioprio_changed = 1;
 
 	bfqd->queue = q;
 
@@ -3479,6 +3493,7 @@ static void *bfq_init_queue(struct request_queue *q)
 	}
 
 	bfqd->root_group = bfqg;
+	bfq_init_entity(&bfqd->oom_bfqq.entity, bfqd->root_group);
 #ifdef CONFIG_CGROUP_BFQIO
 	bfqd->active_numerous_groups = 0;
 #endif
@@ -3854,7 +3869,7 @@ static int __init bfq_init(void)
 	device_speed_thresh[1] = (R_fast[1] + R_slow[1]) / 2;
 
 	elv_register(&iosched_bfq);
-	pr_info("BFQ I/O-scheduler version: v7r6");
+	pr_info("BFQ I/O-scheduler version: v7r7");
 
 	return 0;
 }
