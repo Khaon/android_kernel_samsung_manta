@@ -80,10 +80,10 @@ static const int bfq_fifo_expire[2] = { HZ / 4, HZ / 8 };
 static const int bfq_back_max = 16 * 1024;
 
 /* Penalty of a backwards seek, in number of sectors. */
-static const int bfq_back_penalty = 2;
+static const int bfq_back_penalty = 1;
 
 /* Idling period duration, in jiffies. */
-static int bfq_slice_idle = HZ / 125;
+static int bfq_slice_idle = 0;
 
 /* Default maximum budget values, in sectors and number of requests. */
 static const int bfq_default_max_budget = 16 * 1024;
@@ -3537,11 +3537,11 @@ static void *bfq_init_queue(struct request_queue *q)
 	bfqd->low_latency = true;
 
 	bfqd->bfq_wr_coeff = 20;
-	bfqd->bfq_wr_rt_max_time = msecs_to_jiffies(300);
+	bfqd->bfq_wr_rt_max_time = msecs_to_jiffies(225);
 	bfqd->bfq_wr_max_time = 0;
-	bfqd->bfq_wr_min_idle_time = msecs_to_jiffies(2000);
-	bfqd->bfq_wr_min_inter_arr_async = msecs_to_jiffies(500);
-	bfqd->bfq_wr_max_softrt_rate = 7000; /*
+	bfqd->bfq_wr_min_idle_time = msecs_to_jiffies(1500);
+	bfqd->bfq_wr_min_inter_arr_async = msecs_to_jiffies(400);
+	bfqd->bfq_wr_max_softrt_rate = 2000; /*
 					      * Approximate rate required
 					      * to playback or record a
 					      * high-definition compressed
@@ -3843,7 +3843,7 @@ static int __init bfq_init(void)
 	 * Can be 0 on HZ < 1000 setups.
 	 */
 	if (bfq_slice_idle == 0)
-		bfq_slice_idle = 1;
+		bfq_slice_idle = 0;
 
 	if (bfq_timeout_async == 0)
 		bfq_timeout_async = 1;
