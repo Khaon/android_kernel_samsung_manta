@@ -17,6 +17,7 @@
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/jiffies.h>
+#include <linux/ktime.h>
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
 #include <linux/hrtimer.h>
@@ -25,6 +26,7 @@
 #include <linux/sched.h>
 #include <linux/input.h>
 #include <linux/slab.h>
+#include <linux/touchboost.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -625,6 +627,7 @@ static struct attribute_group dbs_attr_group = {
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 {
+	u64 now;
 	unsigned int load = 0;
 	unsigned int max_load = 0;
 	unsigned int freq_target;
@@ -634,17 +637,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	policy = this_dbs_info->cur_policy;
 
-	if (boostpulse_relayf)
-	{
-		
-		if (boost_hold_cycles_cnt >= dbs_tuners_ins.block_cycles_boost)
-		{
-			boostpulse_relayf = false;
-			boost_hold_cycles_cnt = 0;
-            return;
-		}
-		boost_hold_cycles_cnt++;
+	now = ktime_to_us(ktime_get());
 
+	if (now < (get_input_time() + dbs_tuners_ins.block_cycles_boost * dbs_tuners_ins.sampling_rate))
+	{
 		this_dbs_info->down_skip = 0;
 		/* if we are already at full speed then break out early */
 		if (this_dbs_info->requested_freq == policy->max || policy->cur >= dbs_tuners_ins.boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.boost_cpu)
@@ -827,80 +823,7 @@ void boostpulse_relay_kt(void)
 	}
 }
 
-static void boost_input_event(struct input_handle *handle,
-                unsigned int type, unsigned int code, int value)
-{
-	u64 now;
 
-	if (type == EV_ABS && code == ABS_MT_TRACKING_ID) {
-		now = ktime_to_us(ktime_get());
-
-		if (now - last_input_time < MIN_TIME_INTERVAL_US)
-			return;
-
-    boostpulse_relay_kt();
-		last_input_time = ktime_to_us(ktime_get());
-	}
-}
-
-static int boost_input_connect(struct input_handler *handler,
-                struct input_dev *dev, const struct input_device_id *id)
-{
-	struct input_handle *handle;
-	int error;
-
-	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
-	if (handle == NULL)
-		return -ENOMEM;
-
-	handle->dev = dev;
-	handle->handler = handler;
-	handle->name = handler->name;
-
-	error = input_register_handle(handle);
-	if (error)
-		goto err;
-
-	error = input_open_device(handle);
-        if (error) {
-                input_unregister_handle(handle);
-		goto err;
-	}
-
-	return 0;
-
-err:
-	kfree(handle);
-	return error;
-}
-
-static void boost_input_disconnect(struct input_handle *handle)
-{
-	input_close_device(handle);
-	input_unregister_handle(handle);
-	kfree(handle);
-}
-
-static const struct input_device_id boost_ids[] = {
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.evbit = { BIT_MASK(EV_ABS) },
-		/* assumption: MT_.._X & MT_.._Y are in the same long */
-		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
-				BIT_MASK(ABS_MT_POSITION_X) |
-				BIT_MASK(ABS_MT_POSITION_Y) },
-	},
-	{ },
-};
-
-static struct input_handler boost_input_handler = {
-	.event          = boost_input_event,
-	.connect        = boost_input_connect,
-	.disconnect     = boost_input_disconnect,
-	.name           = "ktoonservative-boost",
-	.id_table       = boost_ids,
-};
 
 
 static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
@@ -1026,8 +949,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					&dbs_cpufreq_notifier_block,
 					CPUFREQ_TRANSITION_NOTIFIER);
 		}
-	  if (input_register_handler(&boost_input_handler))
-        pr_info("Unable to register the input handler\n");
 		mutex_unlock(&dbs_mutex);
 
 		dbs_timer_init(this_dbs_info);
@@ -1040,7 +961,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		mutex_lock(&dbs_mutex);
 		dbs_enable--;
 		mutex_destroy(&this_dbs_info->timer_mutex);
-	  input_unregister_handler(&boost_input_handler);
 		/*
 		 * Stop the timerschedule work, when this governor
 		 * is used for first time
