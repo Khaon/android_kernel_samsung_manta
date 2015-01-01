@@ -108,13 +108,13 @@ static void tmu_monitor(struct work_struct *work)
 
 	dev_dbg(info->dev, "Current: %dc, FLAG=%d\n", cur_temp, info->tmu_state);
 	if (lcpu_start_throttle == 0)
-		lcpu_start_throttle = 80;
+		lcpu_start_throttle = 85;
 	if (lcpu_stop_throttle == 0)
-		lcpu_stop_throttle = 78;
+		lcpu_stop_throttle = 81;
 	if (lmem_start_throttle == 0)
-		lmem_start_throttle = 85;
+		lmem_start_throttle = 92;
 	if (lmem_stop_throttle == 0)
-		lmem_stop_throttle = 80;
+		lmem_stop_throttle = 87;
 
 	mutex_lock(&tmu_lock);
 	switch (info->tmu_state) {
@@ -540,10 +540,10 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, info);
 
-	lcpu_start_throttle = 80;
-	lcpu_stop_throttle = 78;
-	lmem_start_throttle = 85;
-	lmem_stop_throttle = 80;
+	lcpu_start_throttle = 85;
+	lcpu_stop_throttle = 81;
+	lmem_start_throttle = 92;
+	lmem_stop_throttle = 87;
 
 	ret = exynos_tmu_init(info);
 	if (ret < 0)
