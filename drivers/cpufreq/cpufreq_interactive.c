@@ -113,6 +113,11 @@ static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 /* Duration of a boot pulse in usecs */
 static int boostpulse_duration_val = 3 * DEFAULT_MIN_SAMPLE_TIME;
 
+/*
+ * Making sure cpufreq stays low when it needs to stay low
+ */
+#define DOWN_LOW_LOAD_THRESHOLD 10
+
 #define DEFAULT_INPUT_BOOST_FREQ 800000
 int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
 
@@ -432,6 +437,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 			if (new_freq < hispeed_freq)
 				new_freq = hispeed_freq;
 		}
+	} else if (cpu_load <= DOWN_LOW_LOAD_THRESHOLD) {
+		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
 		new_freq = choose_freq(pcpu, loadadjfreq);
 		if (new_freq > hispeed_freq &&
