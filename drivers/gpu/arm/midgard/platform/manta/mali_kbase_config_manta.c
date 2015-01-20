@@ -63,14 +63,14 @@ static int mali_pm_notifier(struct notifier_block *nb,unsigned long event,void* 
 	switch (event) {
 		case PM_SUSPEND_PREPARE:
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-			//if (kbase_platform_dvfs_enable(false, MALI_DVFS_BL_CONFIG_FREQ)!= MALI_TRUE)
-				//err = NOTIFY_BAD;
+			if (kbase_platform_dvfs_enable(false, MALI_DVFS_BL_CONFIG_FREQ)!= MALI_TRUE)
+				err = NOTIFY_BAD;
 #endif
 			break;
 		case PM_POST_SUSPEND:
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-			//if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
-				//err = NOTIFY_BAD;
+			if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
+				err = NOTIFY_BAD;
 #endif
 			break;
 		default:
@@ -165,17 +165,17 @@ void kbase_device_runtime_disable(struct kbase_device *kbdev)
 static int pm_callback_runtime_on(struct kbase_device *kbdev)
 {
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-	//struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
+	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
 #endif
 	kbase_platform_clock_on(kbdev);
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-	/*if (platform->dvfs_enabled) {
+	if (platform->dvfs_enabled) {
 		if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
 			return -EPERM;
 	} else {
 		if (kbase_platform_dvfs_enable(false, MALI_DVFS_CURRENT_FREQ)!= MALI_TRUE)
 			return -EPERM;
-	}*/
+	}
 #endif
 	return 0;
 }
