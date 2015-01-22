@@ -100,11 +100,11 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table_ordered);
 
 /* Minimum memory throughput in megabytes per second */
 static int exynos5250_bus_table[CPUFREQ_LEVEL_END] = {
-	933000, /* 2.1 GHz */
-	933000, /* 2.0 GHz */
-	933000, /* 1.9 GHz */
-	933000, /* 1.8 GHz */
-	800000, /* 1.7 GHz */
+	864000, /* 2.1 GHz */
+	864000, /* 2.0 GHz */
+	864000, /* 1.9 GHz */
+	864000, /* 1.8 GHz */
+	864000, /* 1.7 GHz */
 	800000, /* 1.6 GHz */
 	800000, /* 1.5 GHz */
 	800000, /* 1.4 GHz */
