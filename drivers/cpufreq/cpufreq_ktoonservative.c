@@ -805,26 +805,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 }
 
-void boostpulse_relay_kt(void)
-{
-	if (!boostpulse_relayf)
-	{
-		if (num_online_cpus() < 2 && dbs_tuners_ins.boost_turn_on_2nd_core)
-			schedule_work_on(0, &hotplug_online_work);
-		else if (dbs_tuners_ins.boost_turn_on_2nd_core == 0 && dbs_tuners_ins.boost_cpu == 0)
-			return;
-
-		boostpulse_relayf = true;
-		boost_hold_cycles_cnt = 0;
-	}
-	else
-	{
-		boost_hold_cycles_cnt = 0;
-	}
-}
-
-
-
 
 static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
 {
