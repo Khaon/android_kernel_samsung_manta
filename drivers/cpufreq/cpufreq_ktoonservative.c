@@ -642,8 +642,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	if (now < (get_input_time() + dbs_tuners_ins.block_cycles_boost * dbs_tuners_ins.sampling_rate))
 	{
 		this_dbs_info->down_skip = 0;
-		/* if we are already at full speed then break out early */
-		if (this_dbs_info->requested_freq == policy->max || policy->cur >= dbs_tuners_ins.boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.boost_cpu)
+		/* if we are already at an higher speed no need to change */
+		if (policy->cur >= dbs_tuners_ins.boost_cpu)
 			return;
 
 		this_dbs_info->requested_freq = dbs_tuners_ins.boost_cpu;
