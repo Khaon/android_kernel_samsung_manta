@@ -33,16 +33,16 @@
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(57)
-#define DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG	(58)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(52)
-#define DEF_FREQUENCY_DOWN_THRESHOLD_HOTPLUG	(35)
-#define DEF_DISABLE_HOTPLUGGING			(0)
+#define DEF_FREQUENCY_UP_THRESHOLD		(95)
+#define DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG	(99)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(90)
+#define DEF_FREQUENCY_DOWN_THRESHOLD_HOTPLUG	(45)
+#define DEF_DISABLE_HOTPLUGGING			(1)
 #define DEF_UP_FREQ_THRESHOLD_HOTPLUG 		(1200000)
 #define DEF_DOWN_FREQ_THRESHOLD_HOTPLUG 	(800000)
-#define DEF_BOOST_CPU				(800000)
+#define DEF_BOOST_CPU				(1400000)
 #define DEF_BOOST_CPU_TURN_ON_2ND_CORE		(1)
-#define DEF_BOOST_HOLD_CYCLES			(5)
+#define DEF_BOOST_HOLD_CYCLES			(4)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -140,14 +140,14 @@ static struct dbs_tuners {
 	.block_cycles_online=10,
 	.block_cycles_offline=25,
 	.block_cycles_raise=2,
-	.block_cycles_reduce=1,
+	.block_cycles_reduce=0,
 	.boost_cpu = DEF_BOOST_CPU,
 	.boost_turn_on_2nd_core = DEF_BOOST_CPU_TURN_ON_2ND_CORE,
 	.block_cycles_boost = DEF_BOOST_HOLD_CYCLES,
 	.disable_hotplugging = DEF_DISABLE_HOTPLUGGING,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.ignore_nice = 0,
-	.freq_step_down = 5,
+	.freq_step_down = 8,
 	.freq_step_up = 5,
 	.up_freq_threshold_hotplug = DEF_UP_FREQ_THRESHOLD_HOTPLUG,
 	.down_freq_threshold_hotplug = DEF_DOWN_FREQ_THRESHOLD_HOTPLUG,
@@ -921,7 +921,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				return rc;
 			}
 
-			dbs_tuners_ins.sampling_rate = 35000;
+			dbs_tuners_ins.sampling_rate = 30000;
 				//max((min_sampling_rate * 20),
 				    //latency * LATENCY_MULTIPLIER);
 
