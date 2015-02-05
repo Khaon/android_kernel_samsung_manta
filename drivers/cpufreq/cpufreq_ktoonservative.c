@@ -643,13 +643,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	{
 		this_dbs_info->down_skip = 0;
 		/* if we are already at an higher speed no need to change */
-		if (policy->cur >= dbs_tuners_ins.boost_cpu)
+		if (policy->cur < dbs_tuners_ins.boost_cpu) {
+			this_dbs_info->requested_freq = dbs_tuners_ins.boost_cpu;
+			__cpufreq_driver_target(policy, this_dbs_info->requested_freq,
+				CPUFREQ_RELATION_H);
 			return;
-
-		this_dbs_info->requested_freq = dbs_tuners_ins.boost_cpu;
-		__cpufreq_driver_target(policy, this_dbs_info->requested_freq,
-			CPUFREQ_RELATION_H);
-		return;
+		}
 	}
 
 	/*
