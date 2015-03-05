@@ -21,7 +21,8 @@ export ANY_KERNEL=/home/khaon/kernels/AnyKernel2
 #Enable FIPS mode
 export USE_SEC_FIPS_MODE=true
 export ARCH=arm
-export CROSS_COMPILE=/home/khaon/Documents/toolchains/linar-4.7.a15/bin/arm-cortex_a15-linux-gnueabihf-
+export CCACHE_DIR=/home/khaon/caches/.ccache_kernels
+export CROSS_COMPILE=/home/khaon/Documents/Toolchains/arm-eabi-4.8/bin/arm-eabi-
 
 echo "${txtbld} Remove old Package Files ${txtrst}"
 rm -rf $PACKAGEDIR/*
@@ -47,39 +48,17 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 
 	echo " ${bldgrn} Kernel built !! ${txtrst}"
 
-	echo "Copy zImage to Package"
-	cp arch/arm/boot/zImage $PACKAGEDIR/zImage
 	export curdate=`date "+%m-%d-%Y"`
 
 	cd $PACKAGEDIR
-	cp -R $ZIP_TEMPLATE/* .  
-	rm ../khaon_kernel_manta_*.zip
 
-	echo "${txtbld} Make ext4 boot.img ${txtrst}"
+	echo "${txtbld} Make AnyKernel flashable archive ${txtrst} "
 	echo ""
-	$KERNELDIR/mkbootfs $INITRAMFS_EXT4 | gzip > $PACKAGEDIR/ramdisk.gz
-	$KERNELDIR/mkbootimg --cmdline 'console = null androidboot.selinux=permissive' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x10000000 --pagesize 2048 --ramdiskaddr 0x11000000 --output $PACKAGEDIR/boot.img
-	rm ramdisk.gz
-  zip -r ../khaon_kernel_manta_-"${curdate}"_EXT4_CM12.zip . -x zImage *~  
-  rm boot.img
-	echo ""
-
-	echo "${txtbld} Make f2fs boot.img ${txtrst}"
-	echo ""
-	$KERNELDIR/mkbootfs $INITRAMFS_F2FS | gzip > $PACKAGEDIR/ramdisk.gz
-	$KERNELDIR/mkbootimg --cmdline 'console = null androidboot.selinux=permissive' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x10000000 --pagesize 2048 --ramdiskaddr 0x11000000 --output $PACKAGEDIR/boot.img
-	rm ramdisk.gz
-  rm zImage
-	zip -r ../khaon_kernel_manta_-"${curdate}"_F2FS_CM12.zip . -x zImage *~  
-	echo ""
-
-  echo "${txtbld} Make AnyKernel flashable archive ${txtrst} "
-	echo ""
-  rm ../UPDATE-AnyKernel2-khaon-kernel-manta-*.zip
-  cd $ANY_KERNEL
-  git clean -fdx; git reset --hard; git checkout manta;
-  cp $KERNELDIR/arch/arm/boot/zImage zImage
-  zip -r9 $PACKAGEDIR/../UPDATE-AnyKernel2-khaon-kernel-manta-"${curdate}".zip * -x README UPDATE-AnyKernel2.zip .git *~
+	rm ../UPDATE-AnyKernel2-khaon-kernel-manta-*.zip
+	cd $ANY_KERNEL
+	git clean -fdx; git reset --hard; git checkout manta;
+	cp $KERNELDIR/arch/arm/boot/zImage zImage
+	zip -r9 $PACKAGEDIR/../UPDATE-AnyKernel2-khaon-kernel-manta-"${curdate}".zip * -x README UPDATE-AnyKernel2.zip .git *~
 	cd $KERNELDIR
 else
 	echo "KERNEL DID NOT BUILD! no zImage exist"
