@@ -37,7 +37,7 @@ rm $PACKAGEDIR/zImage
 rm arch/arm/boot/zImage
 
 echo "${bldblu} Make the kernel ${txtrst}"
-make khaon_manta_defconfig
+make manta_defconfig
 
 make -j12
 
@@ -58,7 +58,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	cd $ANY_KERNEL
 	git clean -fdx; git reset --hard; git checkout manta;
 	cp $KERNELDIR/arch/arm/boot/zImage zImage
-	zip -r9 $PACKAGEDIR/../UPDATE-AnyKernel2-khaon-kernel-manta-"${curdate}".zip * -x README UPDATE-AnyKernel2.zip .git *~
+	zip -r9 $PACKAGEDIR/../UPDATE-AnyKernel2-khaon-kernel-manta-stock-f2fs-"${curdate}".zip * -x README UPDATE-AnyKernel2.zip .git *~
 	cd $KERNELDIR
 else
 	echo "KERNEL DID NOT BUILD! no zImage exist"
