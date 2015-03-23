@@ -58,14 +58,16 @@ static int mali_pm_notifier(struct notifier_block *nb,unsigned long event,void* 
 	switch (event) {
 		case PM_SUSPEND_PREPARE:
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-			if (kbase_platform_dvfs_enable(false, MALI_DVFS_BL_CONFIG_FREQ)!= MALI_TRUE)
+			if (kbase_platform_dvfs_enable(false, MALI_DVFS_CURRENT_FREQ)!= MALI_TRUE)
 				err = NOTIFY_BAD;
+			pr_info("[GPU/MALI]: pm suspend prepare:gpu freq set to %d",MALI_DVFS_CURRENT_FREQ);
 #endif
 			break;
 		case PM_POST_SUSPEND:
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 			if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
 				err = NOTIFY_BAD;
+			pr_info("[GPU/MALI]: pm post suspend:gpu freq set to %d",MALI_DVFS_START_FREQ);
 #endif
 			break;
 		default:
@@ -167,9 +169,11 @@ static int pm_callback_runtime_on(struct kbase_device *kbdev)
 	if (platform->dvfs_enabled) {
 		if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
 			return -EPERM;
+		pr_info("[GPU/MALI]: runtime on:gpu freq set to %d",MALI_DVFS_START_FREQ);
 	} else {
 		if (kbase_platform_dvfs_enable(false, MALI_DVFS_CURRENT_FREQ)!= MALI_TRUE)
 			return -EPERM;
+		pr_info("[GPU/MALI]: runtime on:gpu freq set to %d",MALI_DVFS_CURRENT_FREQ);
 	}
 #endif
 	return 0;
@@ -181,6 +185,7 @@ static void pm_callback_runtime_off(struct kbase_device *kbdev)
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 	if (kbase_platform_dvfs_enable(false, 100)!= MALI_TRUE)
 		printk("[err] disabling dvfs is faled\n");
+	pr_info("[GPU/MALI]: runtime off:gpu freq set to %d",100);
 #endif
 }
 
