@@ -118,7 +118,7 @@ static int boostpulse_duration_val = 200000;
  */
 #define DOWN_LOW_LOAD_THRESHOLD 20
 
-#define DEFAULT_INPUT_BOOST_FREQ 1100000
+#define DEFAULT_INPUT_BOOST_FREQ 1000000
 int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
 
 /*
