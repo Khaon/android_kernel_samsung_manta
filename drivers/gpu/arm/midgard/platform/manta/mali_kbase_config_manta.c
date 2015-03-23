@@ -166,7 +166,7 @@ static int pm_callback_runtime_on(struct kbase_device *kbdev)
 #endif
 	kbase_platform_clock_on(kbdev);
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-	if (platform->dvfs_enabled) {
+	/*if (platform->dvfs_enabled) {
 		if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
 			return -EPERM;
 		pr_info("[GPU/MALI]: runtime on:gpu freq set to %d",MALI_DVFS_START_FREQ);
@@ -174,7 +174,7 @@ static int pm_callback_runtime_on(struct kbase_device *kbdev)
 		if (kbase_platform_dvfs_enable(false, MALI_DVFS_CURRENT_FREQ)!= MALI_TRUE)
 			return -EPERM;
 		pr_info("[GPU/MALI]: runtime on:gpu freq set to %d",MALI_DVFS_CURRENT_FREQ);
-	}
+	}*/
 #endif
 	return 0;
 }
@@ -183,9 +183,9 @@ static void pm_callback_runtime_off(struct kbase_device *kbdev)
 {
 	kbase_platform_clock_off(kbdev);
 #ifdef CONFIG_MALI_MIDGARD_DVFS
-	if (kbase_platform_dvfs_enable(false, 100)!= MALI_TRUE)
+	/*if (kbase_platform_dvfs_enable(false, 100)!= MALI_TRUE)
 		printk("[err] disabling dvfs is faled\n");
-	pr_info("[GPU/MALI]: runtime off:gpu freq set to %d",100);
+	pr_info("[GPU/MALI]: runtime off:gpu freq set to %d",100);*/
 #endif
 }
 
