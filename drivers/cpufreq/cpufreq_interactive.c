@@ -110,12 +110,12 @@ static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 
 /* Duration of a boot pulse in usecs */
-static int boostpulse_duration_val = 200000;
+static int boostpulse_duration_val = 140000;
 
 /*
  * Making sure cpufreq stays low when it needs to stay low
  */
-#define DOWN_LOW_LOAD_THRESHOLD 20
+#define DOWN_LOW_LOAD_THRESHOLD 15
 
 #define DEFAULT_INPUT_BOOST_FREQ 1000000
 int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
@@ -411,7 +411,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / pcpu->target_freq;
-	pcpu->prev_load = cpu_load;
 	boosted = now < (get_input_time() + boostpulse_duration_val);
 
 	if (cpu_load >= go_hispeed_load || boosted) {
