@@ -51,6 +51,8 @@
 #endif
 #include <mach/exynos5_bus.h>
 
+#include <linux/i2c/atmel_mxt_ts.h>
+
 #ifdef MALI_DVFS_ASV_ENABLE
 #include <mach/asv-exynos.h>
 #define ASV_STATUS_INIT 1
@@ -67,6 +69,8 @@ static int mali_gpu_vol = 1250000;	/* 1.25V @ 533 MHz */
 #endif
 
 static struct exynos5_bus_mif_handle *mem_freq_req;
+
+#define DEFAULT_BOOSTED_TIME_DURATION 200000
 
 /***********************************************************/
 /*  This table and variable are using the check time share of GPU Clock  */
@@ -92,6 +96,8 @@ static mali_dvfs_info mali_dvfs_infotbl[] = {
 };
 
 #define MALI_DVFS_STEP	ARRAY_SIZE(mali_dvfs_infotbl)
+
+unsigned int gpu_boost_level = 3;
 
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 typedef struct _mali_dvfs_status_type {
@@ -172,7 +178,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 		dvfs_status->step++;
 	else if ((dvfs_status->step > 0) && (platform->time_tick == MALI_DVFS_TIME_INTERVAL)
 		&& (platform->utilisation < mali_dvfs_infotbl[dvfs_status->step].min_threshold))
-		dvfs_status->step--;	
+		dvfs_status->step--;
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
 	if ((dvfs_status->upper_lock >= 0) && (dvfs_status->step > dvfs_status->upper_lock)) {
 		dvfs_status->step = dvfs_status->upper_lock;
@@ -184,6 +190,10 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 	spin_unlock_irqrestore(&mali_dvfs_spinlock, flags);
+
+	if ((ktime_to_us(ktime_get()) < get_last_input_time() + DEFAULT_BOOSTED_TIME_DURATION) && dvfs_status->step < gpu_boost_level)
+		dvfs_status->step = gpu_boost_level;
+
 	kbase_platform_dvfs_set_level(dvfs_status->kbdev, dvfs_status->step);
 
 	mutex_unlock(&mali_enable_clock_lock);
@@ -695,6 +705,18 @@ void kbase_platform_dvfs_set_level(struct kbase_device *kbdev, int level)
 	mutex_unlock(&mali_set_clock_lock);
 #endif
 }
+
+int kbase_platform_dvfs_get_gpu_boost_freq() {
+	return mali_dvfs_infotbl[gpu_boost_level].clock;
+}
+
+void kbase_platform_dvfs_set_gpu_boost_freq(unsigned int freq) {
+	int level = kbase_platform_dvfs_get_level(freq);
+
+	gpu_boost_level = (level <= mali_dvfs_status_current.upper_lock) ? level : mali_dvfs_status_current.upper_lock;
+
+}
+
 
 int kbase_platform_dvfs_sprint_avs_table(char *buf)
 {
