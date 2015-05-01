@@ -51,6 +51,8 @@
 #endif
 #include <mach/exynos5_bus.h>
 
+#include <linux/touchboost.h>
+
 #ifdef MALI_DVFS_ASV_ENABLE
 #include <mach/asv-exynos.h>
 #define ASV_STATUS_INIT 1
@@ -67,6 +69,8 @@ static int mali_gpu_vol = 1250000;	/* 1.25V @ 533 MHz */
 #endif
 
 static struct exynos5_bus_mif_handle *mem_freq_req;
+
+#define DEFAULT_BOOSTED_TIME_DURATION 150000
 
 /***********************************************************/
 /*  This table and variable are using the check time share of GPU Clock  */
@@ -85,10 +89,10 @@ static mali_dvfs_info mali_dvfs_infotbl[] = {
 	{925000, 100, 0, 55, 0, 100000},
 	{925000, 160, 50, 70, 0, 160000},
 	{1025000, 266, 60, 79, 0, 400000},
-	{1075000, 350, 70, 80, 0, 400000},
-	{1125000, 400, 85, 92, 0, 800000},
-	{1150000, 450, 89, 97, 0, 800000},
-	{1200000, 533, 96, 100, 0, 800000},
+	{1075000, 350, 70, 86, 0, 400000},
+	{1125000, 400, 85, 95, 0, 800000},
+	{1150000, 450, 94, 99, 0, 800000},
+	{1200000, 533, 99, 100, 0, 800000},
 };
 
 #define MALI_DVFS_STEP	ARRAY_SIZE(mali_dvfs_infotbl)
@@ -169,18 +173,13 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 	spin_lock_irqsave(&mali_dvfs_spinlock, flags);
+
 	if (dvfs_status->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold) {
-		if (dvfs_status->step==kbase_platform_dvfs_get_level(450)) {
-			if (platform->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold)
-				dvfs_status->step++;
-			BUG_ON(dvfs_status->step >= MALI_DVFS_STEP);
-		} else {
+		if (!(dvfs_status->step >= MALI_DVFS_STEP))
 			dvfs_status->step++;
-			BUG_ON(dvfs_status->step >= MALI_DVFS_STEP);
-		}
 	} else if ((dvfs_status->step > 0) && (platform->time_tick == MALI_DVFS_TIME_INTERVAL) && (platform->utilisation < mali_dvfs_infotbl[dvfs_status->step].min_threshold)) {
-		BUG_ON(dvfs_status->step <= 0);
-		dvfs_status->step--;
+		if (!(dvfs_status->step <= 0))
+			dvfs_status->step--;
 	}
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
 	if ((dvfs_status->upper_lock >= 0) && (dvfs_status->step > dvfs_status->upper_lock)) {
@@ -193,6 +192,10 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 	spin_unlock_irqrestore(&mali_dvfs_spinlock, flags);
+
+	if ((ktime_to_us(ktime_get()) < get_input_time() + DEFAULT_BOOSTED_TIME_DURATION) && dvfs_status->step < 3)
+		dvfs_status->step = 3;
+
 	kbase_platform_dvfs_set_level(dvfs_status->kbdev, dvfs_status->step);
 
 	mutex_unlock(&mali_enable_clock_lock);
@@ -316,7 +319,7 @@ int kbase_platform_dvfs_init(struct kbase_device *kbdev)
 	   add here with the right function to get initilization value.
 	 */
 	if (!mali_dvfs_wq)
-		mali_dvfs_wq = create_singlethread_workqueue("mali_dvfs");
+		mali_dvfs_wq = alloc_workqueue("mali_dvfs", 0, 1);
 
 	spin_lock_init(&mali_dvfs_spinlock);
 	mutex_init(&mali_set_clock_lock);
