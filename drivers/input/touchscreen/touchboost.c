@@ -25,7 +25,7 @@
 #include <linux/input.h>
 #include <linux/time.h>
 
-#define MIN_TIME_INTERVAL_US (150 * USEC_PER_MSEC)
+#define MIN_TIME_INTERVAL_US (300 * USEC_PER_MSEC)
 
 /*
  * Use this variable in your governor of choice to calculate when the cpufreq
@@ -55,7 +55,7 @@ static void boost_input_event(struct input_handle *handle,
 		if (now - last_input_time < MIN_TIME_INTERVAL_US)
 			return;
 
-		last_input_time = ktime_to_us(ktime_get());
+		last_input_time = now;
 	}
 }
 
