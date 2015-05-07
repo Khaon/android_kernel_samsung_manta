@@ -92,7 +92,10 @@ static mali_dvfs_info mali_dvfs_infotbl[] = {
 	{1075000, 350, 70, 86, 0, 400000},
 	{1125000, 400, 85, 95, 0, 800000},
 	{1150000, 450, 94, 99, 0, 800000},
-	{1200000, 533, 99, 100, 0, 800000},
+	{1200000, 533, 98, 99, 0, 800000},
+	{1265000, 612, 99, 100, 0, 800000},
+	{1312500, 667, 99, 100, 0, 800000},
+	{1425000, 720, 99, 100, 0, 800000},
 };
 
 #define MALI_DVFS_STEP	ARRAY_SIZE(mali_dvfs_infotbl)
@@ -124,7 +127,7 @@ static void update_time_in_state(int level);
 /*dvfs status*/
 static mali_dvfs_status mali_dvfs_status_current;
 #ifdef MALI_DVFS_ASV_ENABLE
-static const unsigned int mali_dvfs_vol_default[] = { 925000, 925000, 1025000, 1075000, 1125000, 1150000, 1200000 };
+static const unsigned int mali_dvfs_vol_default[] = { 925000, 925000, 1025000, 1075000, 1125000, 1150000, 1200000 , 1265000, 1365000, 1425000};
 
 static int mali_dvfs_update_asv(int cmd)
 {
@@ -174,7 +177,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #endif
 	spin_lock_irqsave(&mali_dvfs_spinlock, flags);
 
-	if (dvfs_status->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold) {
+	if (dvfs_status->utilisation > 99 || dvfs_status->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold) {
 		if (!(dvfs_status->step >= MALI_DVFS_STEP))
 			dvfs_status->step++;
 	} else if ((dvfs_status->step > 0) && (platform->time_tick == MALI_DVFS_TIME_INTERVAL) && (platform->utilisation < mali_dvfs_infotbl[dvfs_status->step].min_threshold)) {
@@ -333,7 +336,7 @@ int kbase_platform_dvfs_init(struct kbase_device *kbdev)
 	mali_dvfs_status_current.utilisation = 100;
 	mali_dvfs_status_current.step = MALI_DVFS_STEP - 1;
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
-	mali_dvfs_status_current.upper_lock = -1;
+	mali_dvfs_status_current.upper_lock = kbase_platform_dvfs_get_level(533);
 	mali_dvfs_status_current.under_lock = -1;
 #endif
 #ifdef MALI_DVFS_ASV_ENABLE
@@ -587,6 +590,18 @@ void kbase_platform_dvfs_set_clock(struct kbase_device *kbdev, int freq)
 		return;
 
 	switch (freq) {
+		case 720:
+			gpll_rate = 720000000;
+			aclk_400_rate = 720000000;
+			break;
+		case 667:
+			gpll_rate = 667000000;
+			aclk_400_rate = 667000000;
+			break;
+		case 612:
+			gpll_rate = 612000000;
+			aclk_400_rate = 612000000;
+			break;
 		case 533:
 			gpll_rate = 533000000;
 			aclk_400_rate = 533000000;
