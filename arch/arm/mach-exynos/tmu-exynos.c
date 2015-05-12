@@ -39,7 +39,7 @@ static int lcpu_start_throttle;
 static int lcpu_stop_throttle;
 static int lmem_start_throttle;
 static int lmem_stop_throttle;
-static int lmin_throttle_mhz = 1200000;
+static int lmin_throttle_mhz = 1100000;
 
 static DEFINE_MUTEX(tmu_lock);
 
@@ -110,11 +110,11 @@ static void tmu_monitor(struct work_struct *work)
 	if (lcpu_start_throttle == 0)
 		lcpu_start_throttle = 85;
 	if (lcpu_stop_throttle == 0)
-		lcpu_stop_throttle = 81;
+		lcpu_stop_throttle = 77;
 	if (lmem_start_throttle == 0)
-		lmem_start_throttle = 92;
+		lmem_start_throttle = 95;
 	if (lmem_stop_throttle == 0)
-		lmem_stop_throttle = 87;
+		lmem_stop_throttle = 85;
 
 	mutex_lock(&tmu_lock);
 	switch (info->tmu_state) {
@@ -127,7 +127,7 @@ static void tmu_monitor(struct work_struct *work)
 			info->tmu_state = TMU_STATUS_TRIPPED;
 		else if (cur_temp > lcpu_stop_throttle)
 		{
-			if (cur_temp > (lcpu_start_throttle+15))
+			if (cur_temp > (lcpu_start_throttle+7))
 				exynos_thermal_throttle(800000);
 			else
 				exynos_thermal_throttle(lmin_throttle_mhz);
@@ -242,7 +242,7 @@ static int exynos_tmu_init(struct tmu_info *info)
 	info->tmu_state = TMU_STATUS_INIT;
 
 	/* To poll current temp, set sampling rate */
-	info->sampling_rate = msecs_to_jiffies(250);
+	info->sampling_rate = msecs_to_jiffies(1000);
 
 	/* Need to initail regsiter setting after getting parameter info */
 	/* [28:23] vref [11:8] slope - Tunning parameter */
@@ -541,9 +541,9 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, info);
 
 	lcpu_start_throttle = 85;
-	lcpu_stop_throttle = 81;
+	lcpu_stop_throttle = 77;
 	lmem_start_throttle = 92;
-	lmem_stop_throttle = 87;
+	lmem_stop_throttle = 82;
 
 	ret = exynos_tmu_init(info);
 	if (ret < 0)
