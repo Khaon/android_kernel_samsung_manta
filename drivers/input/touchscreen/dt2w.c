@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#define pr_fmt(fmt) "" fmt
+#define pr_fmt(fmt) "[DT2W] :" fmt
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -20,6 +20,7 @@
 #include <linux/input.h>
 #include <linux/time.h>
 #include <linux/delay.h>
+#include <linux/suspend.h>
 
 #define DT2W_TIMEOUT_US (650 * USEC_PER_MSEC)
 
@@ -32,6 +33,31 @@ static u64 now = 0;
 static u64 last_input = 0;
 
 static int counter = 0;
+
+#ifdef CONFIG_PM
+static int dt2w_pm_notifier(struct notifier_block *nb,unsigned long event,void* cmd);
+static struct notifier_block dt2w_pm_nb = {
+	.notifier_call = dt2w_pm_notifier
+};
+
+static int dt2w_pm_notifier(struct notifier_block *nb,unsigned long event,void* cmd)
+{
+	int err = NOTIFY_OK;
+	switch (event) {
+		case PM_SUSPEND_PREPARE:
+			dev_info(&dt2w_dev->dev, "entering into the suspend mode\n");
+			dev_info(&dt2w_dev->dev, "suspend variable is set to %d\n", suspended);
+			if (!suspended)
+				suspended = true;
+			break;
+		case PM_POST_SUSPEND:
+			break;
+		default:
+			break;
+	}
+	return err;
+}
+#endif
 
 struct dt2w_inputopen {
 	struct input_handle *handle;
@@ -65,6 +91,7 @@ static void dt2w_input_event(struct input_handle *handle,
 {
 
 	if (doubletap2wake && suspended && type == EV_ABS && code == ABS_MT_TRACKING_ID) {
+		dev_info(&dt2w_dev->dev, "user interacted with suspended screen\n");
 		now = ktime_to_us(ktime_get());
 		if (last_input + DT2W_TIMEOUT_US < now)
 			counter = 0;
@@ -222,6 +249,8 @@ static int init(void)
 	input_register_device(dt2w_dev);
 	dt2w_dev->name = "Double tap driver";
 	input_set_capability(dt2w_dev, EV_KEY, KEY_POWER);
+
+	register_pm_notifier(&dt2w_pm_nb);
 
 	dt2w_kobj = kobject_create_and_add("android_touch", NULL);
 
