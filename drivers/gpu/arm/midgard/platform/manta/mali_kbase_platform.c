@@ -886,14 +886,10 @@ static ssize_t show_asv(struct device *dev, struct device_attribute *attr, char 
 
 static ssize_t set_asv(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (sysfs_streq("off", buf))
-		kbase_platform_dvfs_set(0);
-	else if (sysfs_streq("on", buf))
-		kbase_platform_dvfs_set(1);
-	else
-		printk(KERN_DEBUG "invalid val -only [on, off] is accepted\n");
+	
 
-	return count;
+	kbase_platform_dvfs_set_avs_table(buf);
+  return count;
 }
 
 static ssize_t show_boost_time_duration(struct device *dev, struct device_attribute *attr, char *buf)

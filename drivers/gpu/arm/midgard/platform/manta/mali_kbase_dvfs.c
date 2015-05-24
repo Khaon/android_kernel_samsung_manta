@@ -726,15 +726,16 @@ void kbase_platform_dvfs_set_boost_time_duration(unsigned int duration) {
 	boost_time_duration = duration;
 }
 
-int kbase_platform_dvfs_sprint_avs_table(char *buf)
+ssize_t kbase_platform_dvfs_sprint_avs_table(char *buf)
 {
 #ifdef MALI_DVFS_ASV_ENABLE
-	int i, cnt = 0;
+	int i;
+  ssize_t cnt;
 	if (buf == NULL)
 		return 0;
 
-	for (i = MALI_DVFS_STEP - 1; i >= 0; i--)
-		cnt += sprintf(buf + cnt, "%dMhz:%d\n", mali_dvfs_infotbl[i].clock, mali_dvfs_infotbl[i].voltage);
+	for (i = 0, cnt = 0; i < MALI_DVFS_STEP; i++)
+		cnt += snprintf(buf + cnt, PAGE_SIZE, "%dmhz: %d mV\n", mali_dvfs_infotbl[i].clock,(mali_dvfs_infotbl[i].voltage/1000));
 
 	return cnt;
 #else
@@ -742,6 +743,38 @@ int kbase_platform_dvfs_sprint_avs_table(char *buf)
 #endif
 }
 
+int kbase_platform_dvfs_set_avs_table(char *buf)
+{
+	int volt, i;
+
+	int ret;
+
+	int u[2*MALI_DVFS_STEP];
+
+	if (buf == NULL)
+		return 0;
+
+	ret = sscanf(buf, "%dmhz: %d mV %dmhz: %d mV %dmhz: %d mV %dmhz: %d mV %dmhz: %d mV %dmhz: %d mV %dmhz: %d mV ",  &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10], &u[11], &u[12], &u[13]);
+
+	if (ret != 2 * MALI_DVFS_STEP) {
+		return -EINVAL;
+	}
+
+	for (i = 0; i < MALI_DVFS_STEP; i++) {
+
+		volt = u[i*2+1] * 1000;
+
+		if (volt  > 1300000)
+			volt = 1300000;
+		else if (volt < 725000)
+			volt = 725000;
+
+		printk(KERN_DEBUG "[GPU/OC]:setting %d mV for %dmhz\n", volt, mali_dvfs_infotbl[i].clock);
+
+		mali_dvfs_infotbl[i].voltage = volt;
+	}
+	return 0;
+}
 
 int kbase_platform_dvfs_set(int enable)
 {
