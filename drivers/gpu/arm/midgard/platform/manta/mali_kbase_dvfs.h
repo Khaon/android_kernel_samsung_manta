@@ -48,6 +48,8 @@ void kbase_platform_dvfs_set_level(struct kbase_device *kbdev, int level);
 int kbase_platform_dvfs_get_level(int freq);
 void kbase_platform_dvfs_set_boost_time_duration(unsigned int duration);
 unsigned int kbase_platform_dvfs_get_boost_time_duration(void);
+unsigned int kbase_platform_dvfs_get_gpu_boost_freq(void);
+void kbase_platform_dvfs_set_gpu_boost_freq(unsigned int freq);
 
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 int kbase_platform_dvfs_init(struct kbase_device *dev);

@@ -97,7 +97,7 @@ static mali_dvfs_info mali_dvfs_infotbl[] = {
 
 #define MALI_DVFS_STEP	ARRAY_SIZE(mali_dvfs_infotbl)
 
-unsigned int gpu_boost_level = 3;
+static unsigned int gpu_boost_level = 4;
 
 static unsigned int boost_time_duration = DEFAULT_BOOSTED_TIME_DURATION;
 
@@ -333,8 +333,8 @@ int kbase_platform_dvfs_init(struct kbase_device *kbdev)
 	mali_dvfs_status_current.utilisation = 100;
 	mali_dvfs_status_current.step = MALI_DVFS_STEP - 1;
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
-	mali_dvfs_status_current.upper_lock = -1;
-	mali_dvfs_status_current.under_lock = -1;
+	mali_dvfs_status_current.upper_lock = kbase_platform_dvfs_get_level(533);
+	mali_dvfs_status_current.under_lock = 0;
 #endif
 #ifdef MALI_DVFS_ASV_ENABLE
 	mali_dvfs_status_current.asv_status=ASV_STATUS_NOT_INIT;
@@ -428,7 +428,7 @@ void mali_dvfs_freq_unlock(void)
 	unsigned long flags;
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
 	spin_lock_irqsave(&mali_dvfs_spinlock, flags);
-	mali_dvfs_status_current.upper_lock = -1;
+	mali_dvfs_status_current.upper_lock = kbase_platform_dvfs_get_level(533);
 	spin_unlock_irqrestore(&mali_dvfs_spinlock, flags);
 #endif
 	printk(KERN_DEBUG "[G3D] Upper Lock Unset\n");
@@ -457,7 +457,7 @@ void mali_dvfs_freq_under_unlock(void)
 	unsigned long flags;
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
 	spin_lock_irqsave(&mali_dvfs_spinlock, flags);
-	mali_dvfs_status_current.under_lock = -1;
+	mali_dvfs_status_current.under_lock = 0;
 	spin_unlock_irqrestore(&mali_dvfs_spinlock, flags);
 #endif
 	printk(KERN_DEBUG "[G3D] Under Lock Unset\n");
@@ -708,15 +708,14 @@ void kbase_platform_dvfs_set_level(struct kbase_device *kbdev, int level)
 #endif
 }
 
-int kbase_platform_dvfs_get_gpu_boost_freq() {
+unsigned int kbase_platform_dvfs_get_gpu_boost_freq() {
 	return mali_dvfs_infotbl[gpu_boost_level].clock;
 }
 
 void kbase_platform_dvfs_set_gpu_boost_freq(unsigned int freq) {
-	int level = kbase_platform_dvfs_get_level(freq);
+	unsigned int level = kbase_platform_dvfs_get_level(freq);
 
-	gpu_boost_level = (level <= mali_dvfs_status_current.upper_lock) ? level : mali_dvfs_status_current.upper_lock;
-
+	gpu_boost_level = (level < mali_dvfs_status_current.upper_lock) ? level : mali_dvfs_status_current.upper_lock;
 }
 
 unsigned int kbase_platform_dvfs_get_boost_time_duration() {

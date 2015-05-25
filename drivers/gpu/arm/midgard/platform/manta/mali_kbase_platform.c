@@ -14,6 +14,7 @@
  * @file mali_kbase_platform.c
  * Platform-dependent init.
  */
+
 #include <mali_kbase.h>
 #include <mali_kbase_pm.h>
 #include <mali_kbase_uku.h>
@@ -922,7 +923,7 @@ static ssize_t set_boost_time_duration(struct device *dev, struct device_attribu
 	unsigned int duration = 0;
 	int ret;
 
-	ret = kstrtol(buf, 10, &duration);
+	ret = kstrtouint(buf, 10, &duration);
 	if (ret == -EINVAL)
 		return ret;
 	if (ret == -ERANGE)
@@ -933,6 +934,51 @@ static ssize_t set_boost_time_duration(struct device *dev, struct device_attribu
 
 	return count;
 }
+
+static ssize_t show_gpu_boost_freq(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+	int val;
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	ret = snprintf(buf, PAGE_SIZE - ret, "Current gpu boost freq is %d Mhz\n", kbase_platform_dvfs_get_gpu_boost_freq());
+
+	return ret;
+}
+
+static ssize_t set_gpu_boost_freq(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	int ret;
+  unsigned int freq;
+
+	ret = kstrtouint(buf, 10, &freq);
+	if (ret == -EINVAL)
+		return ret;
+	if (ret == -ERANGE)
+		return ret;
+
+	if (freq == 100 || freq == 160 || freq == 266 || freq == 350 || freq == 400 || freq == 450 || freq == 533)
+		kbase_platform_dvfs_set_gpu_boost_freq(freq);
+	else {
+		dev_err(dev, "set_boost_clock: invalid value\n");
+		dev_err(dev, "Possible settings : 533, 450, 400, 266, 160, 100\n");
+		return -ENOENT;
+	}
+
+	return count;
+}
+
 
 /** The sysfs file @c clock, fbdev.
  *
@@ -949,6 +995,7 @@ DEVICE_ATTR(dvfs_under_lock, S_IRUGO | S_IWUSR, show_under_lock_dvfs, set_under_
 DEVICE_ATTR(asv, S_IRUGO | S_IWUSR, show_asv, set_asv);
 DEVICE_ATTR(time_in_state, S_IRUGO | S_IWUSR, show_time_in_state, set_time_in_state);
 DEVICE_ATTR(dvfs_boost_time_duration, S_IRUGO | S_IWUSR, show_boost_time_duration, set_boost_time_duration);
+DEVICE_ATTR(dvfs_gpu_boost_freq, S_IRUGO | S_IWUSR, show_gpu_boost_freq, set_gpu_boost_freq);
 
 int kbase_platform_create_sysfs_file(struct device *dev)
 {
@@ -1006,6 +1053,10 @@ int kbase_platform_create_sysfs_file(struct device *dev)
 		dev_err(dev, "Couldn't create sysfs file [dvfs_boost_time_duration]\n");
 		goto out;
 	}
+	if (device_create_file(dev, &dev_attr_dvfs_gpu_boost_freq)) {
+		dev_err(dev, "Couldn't create sysfs file [dvfs_gpu_boost_freq]\n");
+		goto out;
+	}
 	return 0;
  out:
 	return -ENOENT;
@@ -1024,6 +1075,7 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_asv);
 	device_remove_file(dev, &dev_attr_time_in_state);
 	device_remove_file(dev, &dev_attr_dvfs_boost_time_duration);
+	device_remove_file(dev, &dev_attr_dvfs_gpu_boost_freq);
 }
 #endif				/* CONFIG_MALI_MIDGARD_DEBUG_SYS */
 
