@@ -99,6 +99,8 @@ static mali_dvfs_info mali_dvfs_infotbl[] = {
 
 unsigned int gpu_boost_level = 3;
 
+static unsigned int boost_time_duration = DEFAULT_BOOSTED_TIME_DURATION;
+
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 typedef struct _mali_dvfs_status_type {
 	struct kbase_device *kbdev;
@@ -191,7 +193,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #endif
 	spin_unlock_irqrestore(&mali_dvfs_spinlock, flags);
 
-	if ((ktime_to_us(ktime_get()) < get_last_input_time() + DEFAULT_BOOSTED_TIME_DURATION) && dvfs_status->step < gpu_boost_level)
+	if ((ktime_to_us(ktime_get()) < get_last_input_time() + boost_time_duration) && dvfs_status->step < gpu_boost_level)
 		dvfs_status->step = gpu_boost_level;
 
 	kbase_platform_dvfs_set_level(dvfs_status->kbdev, dvfs_status->step);
@@ -717,6 +719,13 @@ void kbase_platform_dvfs_set_gpu_boost_freq(unsigned int freq) {
 
 }
 
+unsigned int kbase_platform_dvfs_get_boost_time_duration() {
+	return boost_time_duration;
+}
+
+void kbase_platform_dvfs_set_boost_time_duration(unsigned int duration) {
+	boost_time_duration = duration;
+}
 
 int kbase_platform_dvfs_sprint_avs_table(char *buf)
 {
@@ -733,6 +742,7 @@ int kbase_platform_dvfs_sprint_avs_table(char *buf)
 	return 0;
 #endif
 }
+
 
 int kbase_platform_dvfs_set(int enable)
 {
