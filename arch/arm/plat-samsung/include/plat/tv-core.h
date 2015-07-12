@@ -41,4 +41,28 @@ static inline void s5p_sdo_setname(char *name)
 #endif
 }
 
+struct s5p_platform_cec {
+#ifdef CONFIG_S5P_DEV_TV
+	void    (*cfg_gpio)(struct platform_device *pdev);
+#endif
+};
+
+struct s5p_hdmi_platdata {
+	void (*hdmiphy_enable)(struct platform_device *pdev, int en);
+};
+
+extern void s5p_hdmi_set_platdata(struct s5p_hdmi_platdata *pd);
+#ifdef CONFIG_S5P_DEV_TV
+extern void __init s5p_hdmi_cec_set_platdata(struct s5p_platform_cec *pd);
+extern void s5p_cec_cfg_gpio(struct platform_device *pdev);
+extern void s5p_int_src_hdmi_hpd(struct platform_device *pdev);
+extern void s5p_int_src_ext_hpd(struct platform_device *pdev);
+extern int s5p_hpd_read_gpio(struct platform_device *pdev);
+extern int s5p_v4l2_hpd_read_gpio(void);
+extern void s5p_v4l2_int_src_hdmi_hpd(void);
+extern void s5p_v4l2_int_src_ext_hpd(void);
+extern void s5p_cec_cfg_gpio(struct platform_device *pdev);
+extern void s5p_hdmiphy_enable(struct platform_device *pdev, int en);
+#endif
+
 #endif /* __SAMSUNG_PLAT_TV_H */

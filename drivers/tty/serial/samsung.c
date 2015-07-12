@@ -427,6 +427,8 @@ static void s3c24xx_serial_shutdown(struct uart_port *port)
 	if (ourport->tx_claimed) {
 		if (!s3c24xx_serial_has_interrupt_mask(port))
 			free_irq(ourport->tx_irq, ourport);
+		else
+			free_irq(port->irq, ourport);
 		tx_enabled(port) = 0;
 		ourport->tx_claimed = 0;
 	}
@@ -434,6 +436,8 @@ static void s3c24xx_serial_shutdown(struct uart_port *port)
 	if (ourport->rx_claimed) {
 		if (!s3c24xx_serial_has_interrupt_mask(port))
 			free_irq(ourport->rx_irq, ourport);
+		/* else already freed above as the s3c64xx_serial_startup()
+		 * will have set both tx_claimed and rx_claimed */
 		ourport->rx_claimed = 0;
 		rx_enabled(port) = 0;
 	}
@@ -542,7 +546,7 @@ static void s3c24xx_serial_pm(struct uart_port *port, unsigned int level,
 	case 0:
 		clk_enable(ourport->clk);
 
-		if (!IS_ERR(ourport->baudclk) && ourport->baudclk != NULL)
+		if (!IS_ERR(ourport->baudclk))
 			clk_enable(ourport->baudclk);
 
 		break;
@@ -608,7 +612,6 @@ static unsigned int s3c24xx_serial_getclk(struct s3c24xx_uart_port *ourport,
 	char clkname[MAX_CLK_NAME_LENGTH];
 	int calc_deviation, deviation = (1 << 30) - 1;
 
-	*best_clk = NULL;
 	clk_sel = (ourport->cfg->clk_sel) ? ourport->cfg->clk_sel :
 			ourport->info->def_clk_sel;
 	for (cnt = 0; cnt < info->num_clks; cnt++) {
@@ -617,7 +620,7 @@ static unsigned int s3c24xx_serial_getclk(struct s3c24xx_uart_port *ourport,
 
 		sprintf(clkname, "clk_uart_baud%d", cnt);
 		clk = clk_get(ourport->port.dev, clkname);
-		if (IS_ERR_OR_NULL(clk))
+		if (IS_ERR(clk))
 			continue;
 
 		rate = clk_get_rate(clk);
@@ -688,7 +691,7 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 {
 	struct s3c2410_uartcfg *cfg = s3c24xx_port_to_cfg(port);
 	struct s3c24xx_uart_port *ourport = to_ourport(port);
-	struct clk *clk = NULL;
+	struct clk *clk = ERR_PTR(-EINVAL);
 	unsigned long flags;
 	unsigned int baud, quot, clk_sel = 0;
 	unsigned int ulcon;
@@ -709,7 +712,7 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 	quot = s3c24xx_serial_getclk(ourport, baud, &clk, &clk_sel);
 	if (baud == 38400 && (port->flags & UPF_SPD_MASK) == UPF_SPD_CUST)
 		quot = port->custom_divisor;
-	if (!clk)
+	if (IS_ERR(clk))
 		return;
 
 	/* check to see if we need  to change clock source */
@@ -717,9 +720,9 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 	if (ourport->baudclk != clk) {
 		s3c24xx_serial_setsource(port, clk_sel);
 
-		if (ourport->baudclk != NULL && !IS_ERR(ourport->baudclk)) {
+		if (!IS_ERR(ourport->baudclk)) {
 			clk_disable(ourport->baudclk);
-			ourport->baudclk  = NULL;
+			ourport->baudclk = ERR_PTR(-EINVAL);
 		}
 
 		clk_enable(clk);
@@ -876,6 +879,13 @@ s3c24xx_serial_verify_port(struct uart_port *port, struct serial_struct *ser)
 	return 0;
 }
 
+static void s3c24xx_serial_wake_peer(struct uart_port *port)
+{
+	struct s3c2410_uartcfg *cfg = s3c24xx_port_to_cfg(port);
+
+	if (cfg->wake_peer)
+		cfg->wake_peer(port);
+}
 
 #ifdef CONFIG_SERIAL_SAMSUNG_CONSOLE
 
@@ -904,6 +914,7 @@ static struct uart_ops s3c24xx_serial_ops = {
 	.request_port	= s3c24xx_serial_request_port,
 	.config_port	= s3c24xx_serial_config_port,
 	.verify_port	= s3c24xx_serial_verify_port,
+	.wake_peer	= s3c24xx_serial_wake_peer,
 };
 
 static struct uart_driver s3c24xx_uart_drv = {
@@ -1018,10 +1029,10 @@ static int s3c24xx_serial_cpufreq_transition(struct notifier_block *nb,
 	 * a disturbance in the clock-rate over the change.
 	 */
 
-	if (IS_ERR(port->clk))
+	if (IS_ERR(port->baudclk))
 		goto exit;
 
-	if (port->baudclk_rate == clk_get_rate(port->clk))
+	if (port->baudclk_rate == clk_get_rate(port->baudclk))
 		goto exit;
 
 	if (val == CPUFREQ_PRECHANGE) {
@@ -1164,7 +1175,11 @@ static ssize_t s3c24xx_serial_show_clksrc(struct device *dev,
 	struct uart_port *port = s3c24xx_dev_to_port(dev);
 	struct s3c24xx_uart_port *ourport = to_ourport(port);
 
-	return snprintf(buf, PAGE_SIZE, "* %s\n", ourport->baudclk->name);
+	if (IS_ERR(ourport->baudclk))
+		return -EINVAL;
+
+	return snprintf(buf, PAGE_SIZE, "* %s\n",
+			ourport->baudclk->name ?: "(null)");
 }
 
 static DEVICE_ATTR(clock_source, S_IRUGO, s3c24xx_serial_show_clksrc, NULL);
@@ -1173,7 +1188,6 @@ static DEVICE_ATTR(clock_source, S_IRUGO, s3c24xx_serial_show_clksrc, NULL);
 /* Device driver serial port probe */
 
 static const struct of_device_id s3c24xx_uart_dt_match[];
-static int probe_index;
 
 static inline struct s3c24xx_serial_drv_data *s3c24xx_get_driver_data(
 			struct platform_device *pdev)
@@ -1194,9 +1208,12 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 	struct s3c24xx_uart_port *ourport;
 	int ret;
 
-	dbg("s3c24xx_serial_probe(%p) %d\n", pdev, probe_index);
+	dbg("s3c24xx_serial_probe(%p) %d\n", pdev, pdev->id);
 
-	ourport = &s3c24xx_serial_ports[probe_index];
+	if (pdev->id >= CONFIG_SERIAL_SAMSUNG_UARTS)
+		return -EINVAL;
+
+	ourport = &s3c24xx_serial_ports[pdev->id];
 
 	ourport->drv_data = s3c24xx_get_driver_data(pdev);
 	if (!ourport->drv_data) {
@@ -1204,6 +1221,7 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	ourport->baudclk = ERR_PTR(-EINVAL);
 	ourport->info = ourport->drv_data->info;
 	ourport->cfg = (pdev->dev.platform_data) ?
 			(struct s3c2410_uartcfg *)pdev->dev.platform_data :
@@ -1211,9 +1229,7 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 
 	ourport->port.fifosize = (ourport->info->fifosize) ?
 		ourport->info->fifosize :
-		ourport->drv_data->fifosize[probe_index];
-
-	probe_index++;
+		ourport->drv_data->fifosize[pdev->id];
 
 	dbg("%s: initialising port %p...\n", __func__, ourport);
 
@@ -1254,9 +1270,13 @@ static int __devexit s3c24xx_serial_remove(struct platform_device *dev)
 
 /* UART power management code */
 #ifdef CONFIG_PM_SLEEP
+unsigned int s3c24xx_serial_mask_save[CONFIG_SERIAL_SAMSUNG_UARTS];
+
 static int s3c24xx_serial_suspend(struct device *dev)
 {
 	struct uart_port *port = s3c24xx_dev_to_port(dev);
+
+	s3c24xx_serial_mask_save[port -> line] = rd_regl(port, S3C64XX_UINTM);
 
 	if (port)
 		uart_suspend_port(&s3c24xx_uart_drv, port);
@@ -1271,6 +1291,7 @@ static int s3c24xx_serial_resume(struct device *dev)
 
 	if (port) {
 		clk_enable(ourport->clk);
+		wr_regl(port, S3C64XX_UINTM, s3c24xx_serial_mask_save[port->line]);
 		s3c24xx_serial_resetport(port, s3c24xx_port_to_cfg(port));
 		clk_disable(ourport->clk);
 
@@ -1391,7 +1412,7 @@ s3c24xx_serial_get_options(struct uart_port *port, int *baud,
 		sprintf(clk_name, "clk_uart_baud%d", clk_sel);
 
 		clk = clk_get(port->dev, clk_name);
-		if (!IS_ERR(clk) && clk != NULL)
+		if (!IS_ERR(clk))
 			rate = clk_get_rate(clk);
 		else
 			rate = 1;

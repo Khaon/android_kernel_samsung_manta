@@ -482,6 +482,7 @@ struct hid_device {							/* device report descriptor */
 	enum hid_type type;						/* device type (mouse, kbd, ...) */
 	unsigned country;						/* HID country */
 	struct hid_report_enum report_enum[HID_REPORT_TYPES];
+	struct work_struct led_work;					/* delayed LED worker */
 
 	struct semaphore driver_lock;					/* protects the current driver */
 	struct device dev;						/* device */
@@ -620,6 +621,8 @@ struct hid_usage_id {
  * @input_mapping: invoked on input registering before mapping an usage
  * @input_mapped: invoked on input registering after mapping an usage
  * @feature_mapping: invoked on feature registering
+ * @input_register: called just before input device is registered after reports
+ * 		    are parsed.
  * @suspend: invoked on suspend (NULL means nop)
  * @resume: invoked on resume if device was not reset (NULL means nop)
  * @reset_resume: invoked on resume if device was reset (NULL means nop)
@@ -666,6 +669,8 @@ struct hid_driver {
 	void (*feature_mapping)(struct hid_device *hdev,
 			struct hid_field *field,
 			struct hid_usage *usage);
+	int (*input_register)(struct hid_device *hdev, struct hid_input
+			*hidinput);
 #ifdef CONFIG_PM
 	int (*suspend)(struct hid_device *hdev, pm_message_t message);
 	int (*resume)(struct hid_device *hdev);

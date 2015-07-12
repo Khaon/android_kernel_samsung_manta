@@ -64,6 +64,8 @@
 #include <plat/regs-serial.h>
 #include <plat/regs-spi.h>
 #include <plat/s3c64xx-spi.h>
+#include <plat/tv-core.h>
+#include <plat/pwm.h>
 
 static u64 samsung_device_dma_mask = DMA_BIT_MASK(32);
 
@@ -93,9 +95,10 @@ struct platform_device s3c_device_ac97 = {
 
 #ifdef CONFIG_PLAT_S3C24XX
 static struct resource s3c_adc_resource[] = {
-	[0] = DEFINE_RES_MEM(S3C24XX_PA_ADC, S3C24XX_SZ_ADC),
-	[1] = DEFINE_RES_IRQ(IRQ_TC),
-	[2] = DEFINE_RES_IRQ(IRQ_ADC),
+	[0] = DEFINE_RES_MEM_NAMED(S3C24XX_PA_ADC,
+				   S3C24XX_SZ_ADC, "samsung-adc"),
+	[1] = DEFINE_RES_IRQ_NAMED(IRQ_TC, "samsung-tc"),
+	[2] = DEFINE_RES_IRQ_NAMED(IRQ_ADC, "samsung-adc"),
 };
 
 struct platform_device s3c_device_adc = {
@@ -108,9 +111,11 @@ struct platform_device s3c_device_adc = {
 
 #if defined(CONFIG_SAMSUNG_DEV_ADC)
 static struct resource s3c_adc_resource[] = {
-	[0] = DEFINE_RES_MEM(SAMSUNG_PA_ADC, SZ_256),
-	[1] = DEFINE_RES_IRQ(IRQ_TC),
-	[2] = DEFINE_RES_IRQ(IRQ_ADC),
+	[0] = DEFINE_RES_MEM_NAMED(SAMSUNG_PA_ADC, SZ_256, "samsung-adc"),
+#ifdef IRQ_TC
+	[1] = DEFINE_RES_IRQ_NAMED(IRQ_TC, "samsung-tc"),
+#endif
+	[2] = DEFINE_RES_IRQ_NAMED(IRQ_ADC, "samsung-adc"),
 };
 
 struct platform_device s3c_device_adc = {
@@ -119,6 +124,12 @@ struct platform_device s3c_device_adc = {
 	.num_resources	= ARRAY_SIZE(s3c_adc_resource),
 	.resource	= s3c_adc_resource,
 };
+
+void __init s3c_adc_set_platdata(struct s3c_adc_platdata *pd)
+{
+	s3c_set_platdata(pd, sizeof(struct s3c_adc_platdata),
+			 &s3c_device_adc);
+}
 #endif /* CONFIG_SAMSUNG_DEV_ADC */
 
 /* Camif Controller */
@@ -342,6 +353,39 @@ void __init s5p_fimd0_set_platdata(struct s3c_fb_platdata *pd)
 }
 #endif /* CONFIG_S5P_DEV_FIMD0 */
 
+/* FIMD1 */
+
+#ifdef CONFIG_S5P_DEV_FIMD1
+static struct resource s5p_fimd1_resource[] = {
+#ifdef CONFIG_FB_EXYNOS_FIMD_V8
+	[0] = DEFINE_RES_MEM(S5P_PA_FIMD1, SZ_256K),
+#else
+	[0] = DEFINE_RES_MEM(S5P_PA_FIMD1, SZ_32K),
+#endif
+	[1] = DEFINE_RES_IRQ(IRQ_FIMD1_VSYNC),
+	[2] = DEFINE_RES_IRQ(IRQ_FIMD1_FIFO),
+	[3] = DEFINE_RES_IRQ(IRQ_FIMD1_SYSTEM),
+	[4] = DEFINE_RES_MEM(0, SZ_1), /* to be populated later */
+};
+
+struct platform_device s5p_device_fimd1 = {
+	.name		= "s5p-fb",
+	.id		= 1,
+	.num_resources	= ARRAY_SIZE(s5p_fimd1_resource),
+	.resource	= s5p_fimd1_resource,
+	.dev		= {
+		.dma_mask		= &samsung_device_dma_mask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	},
+};
+
+void __init s5p_fimd1_set_platdata(struct s3c_fb_platdata *pd)
+{
+	s3c_set_platdata(pd, sizeof(struct s3c_fb_platdata),
+			 &s5p_device_fimd1);
+}
+#endif /* CONFIG_S5P_DEV_FIMD1 */
+
 /* HWMON */
 
 #ifdef CONFIG_S3C_DEV_HWMON
@@ -507,7 +551,7 @@ struct platform_device s3c_device_i2c0 = {
 struct s3c2410_platform_i2c default_i2c_data __initdata = {
 	.flags		= 0,
 	.slave_addr	= 0x10,
-	.frequency	= 100*1000,
+	.frequency	= 400*1000,
 	.sda_delay	= 100,
 };
 
@@ -746,8 +790,8 @@ static struct resource s5p_i2c_resource[] = {
 };
 
 struct platform_device s5p_device_i2c_hdmiphy = {
-	.name		= "s3c2440-hdmiphy-i2c",
-	.id		= -1,
+	.name		= "s3c2440-i2c",
+	.id		= 8,
 	.num_resources	= ARRAY_SIZE(s5p_i2c_resource),
 	.resource	= s5p_i2c_resource,
 };
@@ -763,6 +807,8 @@ void __init s5p_i2c_hdmiphy_set_platdata(struct s3c2410_platform_i2c *pd)
 			pd->bus_num = 8;
 		else if (soc_is_s5pv210())
 			pd->bus_num = 3;
+		else if (soc_is_exynos5250())
+			pd->bus_num = 8;
 		else
 			pd->bus_num = 0;
 	}
@@ -918,36 +964,6 @@ struct platform_device s5p_device_mfc_r = {
 	},
 };
 #endif /* CONFIG_S5P_DEV_MFC */
-
-/* MIPI CSIS */
-
-#ifdef CONFIG_S5P_DEV_CSIS0
-static struct resource s5p_mipi_csis0_resource[] = {
-	[0] = DEFINE_RES_MEM(S5P_PA_MIPI_CSIS0, SZ_16K),
-	[1] = DEFINE_RES_IRQ(IRQ_MIPI_CSIS0),
-};
-
-struct platform_device s5p_device_mipi_csis0 = {
-	.name		= "s5p-mipi-csis",
-	.id		= 0,
-	.num_resources	= ARRAY_SIZE(s5p_mipi_csis0_resource),
-	.resource	= s5p_mipi_csis0_resource,
-};
-#endif /* CONFIG_S5P_DEV_CSIS0 */
-
-#ifdef CONFIG_S5P_DEV_CSIS1
-static struct resource s5p_mipi_csis1_resource[] = {
-	[0] = DEFINE_RES_MEM(S5P_PA_MIPI_CSIS1, SZ_16K),
-	[1] = DEFINE_RES_IRQ(IRQ_MIPI_CSIS1),
-};
-
-struct platform_device s5p_device_mipi_csis1 = {
-	.name		= "s5p-mipi-csis",
-	.id		= 1,
-	.num_resources	= ARRAY_SIZE(s5p_mipi_csis1_resource),
-	.resource	= s5p_mipi_csis1_resource,
-};
-#endif
 
 /* NAND */
 
@@ -1111,7 +1127,14 @@ struct platform_device s5p_device_onenand = {
 
 #ifdef CONFIG_PLAT_S5P
 static struct resource s5p_pmu_resource[] = {
-	DEFINE_RES_IRQ(IRQ_PMU)
+	[0] = DEFINE_RES_IRQ(IRQ_PMU),
+#if CONFIG_NR_CPUS > 1
+	[1] = DEFINE_RES_IRQ(IRQ_PMU_CPU1),
+#endif
+#if CONFIG_NR_CPUS > 2
+	[2] = DEFINE_RES_IRQ(IRQ_PMU_CPU2),
+	[3] = DEFINE_RES_IRQ(IRQ_PMU_CPU3),
+#endif
 };
 
 static struct platform_device s5p_device_pmu = {
@@ -1123,7 +1146,14 @@ static struct platform_device s5p_device_pmu = {
 
 static int __init s5p_pmu_init(void)
 {
-	platform_device_register(&s5p_device_pmu);
+	int ret;
+
+	ret = platform_device_register(&s5p_device_pmu);
+	if (ret) {
+		pr_warning("s5p_pmu_init: pmu device not registered.\n");
+		return ret;
+	}
+
 	return 0;
 }
 arch_initcall(s5p_pmu_init);
@@ -1162,6 +1192,22 @@ struct platform_device s3c_device_timer[] = {
 	[3] = { DEFINE_S3C_TIMER(3, IRQ_TIMER3) },
 	[4] = { DEFINE_S3C_TIMER(4, IRQ_TIMER4) },
 };
+
+void __init samsung_pwm_set_platdata(struct samsung_pwm_platdata *pd)
+{
+	int i;
+	struct samsung_pwm_platdata *npd;
+
+	BUG_ON(!pd);
+
+	/*
+	 * Each 5 PWM Timers have own platform_device, but
+	 * only one platform_data is valid for all of PWMs
+	 */
+	for (i = 0 ; i < 5; i++)
+		npd = s3c_set_platdata(pd, sizeof(struct samsung_pwm_platdata),
+				       &s3c_device_timer[i]);
+}
 #endif /* CONFIG_SAMSUNG_DEV_PWM */
 
 /* RTC */
@@ -1312,7 +1358,8 @@ void __init s3c24xx_ts_set_platdata(struct s3c2410_ts_mach_info *pd)
 
 static struct resource s5p_hdmi_resources[] = {
 	[0] = DEFINE_RES_MEM(S5P_PA_HDMI, SZ_1M),
-	[1] = DEFINE_RES_IRQ(IRQ_HDMI),
+	[1] = DEFINE_RES_IRQ(IRQ_TVOUT_EXT_HPD),
+	[2] = DEFINE_RES_IRQ(IRQ_HDMI),
 };
 
 struct platform_device s5p_device_hdmi = {
@@ -1322,6 +1369,17 @@ struct platform_device s5p_device_hdmi = {
 	.resource	= s5p_hdmi_resources,
 };
 
+void __init s5p_hdmi_set_platdata(struct s5p_hdmi_platdata *pd)
+{
+	struct s5p_hdmi_platdata *npd;
+	npd = s3c_set_platdata(pd, sizeof(struct
+				s5p_hdmi_platdata),
+			&s5p_device_hdmi);
+	if (!npd->hdmiphy_enable)
+		npd->hdmiphy_enable = s5p_hdmiphy_enable;
+}
+
+#if defined(CONFIG_ARCH_EXYNOS4)
 static struct resource s5p_sdo_resources[] = {
 	[0] = DEFINE_RES_MEM(S5P_PA_SDO, SZ_64K),
 	[1] = DEFINE_RES_IRQ(IRQ_SDO),
@@ -1339,6 +1397,12 @@ static struct resource s5p_mixer_resources[] = {
 	[1] = DEFINE_RES_MEM_NAMED(S5P_PA_VP, SZ_64K, "vp"),
 	[2] = DEFINE_RES_IRQ_NAMED(IRQ_MIXER, "irq"),
 };
+#else
+static struct resource s5p_mixer_resources[] = {
+	[0] = DEFINE_RES_MEM_NAMED(S5P_PA_MIXER, SZ_64K, "mxr"),
+	[2] = DEFINE_RES_IRQ_NAMED(IRQ_MIXER, "irq"),
+};
+#endif
 
 struct platform_device s5p_device_mixer = {
 	.name		= "s5p-mixer",
@@ -1350,6 +1414,34 @@ struct platform_device s5p_device_mixer = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+
+static struct resource s5p_cec_resources[] = {
+	[0] = DEFINE_RES_MEM_NAMED(S5P_PA_HDMI_CEC, SZ_64K, "cec"),
+	[1] = DEFINE_RES_IRQ_NAMED(IRQ_CEC, "irq"),
+};
+
+struct platform_device s5p_device_cec = {
+	.name           = "s5p-tvout-cec",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(s5p_cec_resources),
+	.resource       = s5p_cec_resources,
+};
+
+void __init s5p_hdmi_cec_set_platdata(struct s5p_platform_cec *pd)
+{
+	struct s5p_platform_cec *npd;
+
+	npd = kmemdup(pd, sizeof(struct s5p_platform_cec), GFP_KERNEL);
+	if (!npd)
+		printk(KERN_ERR "%s: no memory for platform data\n",
+				__func__);
+	else {
+		if (!npd->cfg_gpio)
+			npd->cfg_gpio = s5p_cec_cfg_gpio;
+		s5p_device_cec.dev.platform_data = npd;
+	}
+}
+
 #endif /* CONFIG_S5P_DEV_TV */
 
 /* USB */
@@ -1640,3 +1732,23 @@ void __init s3c64xx_spi2_set_platdata(struct s3c64xx_spi_info *pd,
 	s3c_set_platdata(pd, sizeof(*pd), &s3c64xx_device_spi2);
 }
 #endif /* CONFIG_S3C64XX_DEV_SPI2 */
+
+#ifdef CONFIG_MALI_MIDGARD
+static struct resource g3d_resource[] = {
+	[0] = DEFINE_RES_MEM(EXYNOS5_PA_G3D, (SZ_4K * 5)),
+	[1] = DEFINE_RES_IRQ(JOB_IRQ_NUMBER),
+	[2] = DEFINE_RES_IRQ(MMU_IRQ_NUMBER),
+	[3] = DEFINE_RES_IRQ(GPU_IRQ_NUMBER),
+};
+
+struct platform_device exynos5_device_g3d = {
+	.name	= "mali",
+	.id		= 0,
+	.num_resources	= ARRAY_SIZE(g3d_resource),
+	.resource	= g3d_resource,
+	.dev = {
+		.dma_mask	= &samsung_device_dma_mask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	},
+};
+#endif /*CONFIG_MALI_MIDGARD*/

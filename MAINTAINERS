@@ -5937,6 +5937,16 @@ S:	Maintained
 F:	drivers/mmc/host/sdhci.*
 F:	drivers/mmc/host/sdhci-pltfm.[ch]
 
+SECURE COMPUTING
+M:	Kees Cook <keescook@chromium.org>
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git seccomp
+S:	Supported
+F:	kernel/seccomp.c
+F:	include/uapi/linux/seccomp.h
+F:	include/linux/seccomp.h
+K:	\bsecure_computing
+K:	\bTIF_SECCOMP\b
+
 SECURE DIGITAL HOST CONTROLLER INTERFACE, OPEN FIRMWARE BINDINGS (SDHCI-OF)
 M:	Anton Vorontsov <avorontsov@ru.mvista.com>
 L:	linuxppc-dev@lists.ozlabs.org
@@ -6855,6 +6865,13 @@ M:	Evgeniy Dushistov <dushistov@mail.ru>
 S:	Maintained
 F:	Documentation/filesystems/ufs.txt
 F:	fs/ufs/
+
+UHID USERSPACE HID IO DRIVER:
+M:	David Herrmann <dh.herrmann@googlemail.com>
+L:	linux-input@vger.kernel.org
+S:	Maintained
+F:	drivers/hid/uhid.c
+F:	include/linux/uhid.h
 
 ULTRA-WIDEBAND (UWB) SUBSYSTEM:
 L:	linux-usb@vger.kernel.org

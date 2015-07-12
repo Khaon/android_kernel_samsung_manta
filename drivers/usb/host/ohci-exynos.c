@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/platform_device.h>
+#include <linux/usb/otg.h>
 #include <mach/ohci.h>
 #include <plat/usb-phy.h>
 
@@ -20,7 +21,22 @@ struct exynos_ohci_hcd {
 	struct device *dev;
 	struct usb_hcd *hcd;
 	struct clk *clk;
+	struct usb_phy *phy;
 };
+
+static int ohci_exynos_init(struct usb_hcd *hcd)
+{
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+	int ret;
+
+	ohci_dbg(ohci, "ohci_exynos_init, ohci:%p", ohci);
+
+	ret = ohci_init(ohci);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
 
 static int ohci_exynos_start(struct usb_hcd *hcd)
 {
@@ -28,10 +44,6 @@ static int ohci_exynos_start(struct usb_hcd *hcd)
 	int ret;
 
 	ohci_dbg(ohci, "ohci_exynos_start, ohci:%p", ohci);
-
-	ret = ohci_init(ohci);
-	if (ret < 0)
-		return ret;
 
 	ret = ohci_run(ohci);
 	if (ret < 0) {
@@ -51,6 +63,7 @@ static const struct hc_driver exynos_ohci_hc_driver = {
 	.irq			= ohci_irq,
 	.flags			= HCD_MEMORY|HCD_USB11,
 
+	.reset			= ohci_exynos_init,
 	.start			= ohci_exynos_start,
 	.stop			= ohci_stop,
 	.shutdown		= ohci_shutdown,
@@ -102,6 +115,7 @@ static int __devinit exynos_ohci_probe(struct platform_device *pdev)
 
 	exynos_ohci->hcd = hcd;
 	exynos_ohci->clk = clk_get(&pdev->dev, "usbhost");
+	exynos_ohci->phy = usb_get_transceiver();
 
 	if (IS_ERR(exynos_ohci->clk)) {
 		dev_err(&pdev->dev, "Failed to get usbhost clock\n");
@@ -136,7 +150,9 @@ static int __devinit exynos_ohci_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	if (pdata->phy_init)
+	if (exynos_ohci->phy)
+		usb_phy_init(exynos_ohci->phy);
+	else if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
 	ohci = hcd_to_ohci(hcd);
@@ -148,7 +164,12 @@ static int __devinit exynos_ohci_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	if (exynos_ohci->phy)
+		otg_set_host(exynos_ohci->phy->otg, &hcd->self);
+
 	platform_set_drvdata(pdev, exynos_ohci);
+
+	clk_disable(exynos_ohci->clk);
 
 	return 0;
 
@@ -161,6 +182,8 @@ fail_clken:
 fail_clk:
 	usb_put_hcd(hcd);
 fail_hcd:
+	if (exynos_ohci->phy)
+		usb_put_transceiver(exynos_ohci->phy);
 	kfree(exynos_ohci);
 	return err;
 }
@@ -173,7 +196,9 @@ static int __devexit exynos_ohci_remove(struct platform_device *pdev)
 
 	usb_remove_hcd(hcd);
 
-	if (pdata && pdata->phy_exit)
+	if (exynos_ohci->phy)
+		usb_put_transceiver(exynos_ohci->phy);
+	else if (pdata && pdata->phy_exit)
 		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
 
 	iounmap(hcd->regs);
@@ -192,6 +217,9 @@ static void exynos_ohci_shutdown(struct platform_device *pdev)
 	struct exynos_ohci_hcd *exynos_ohci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = exynos_ohci->hcd;
 
+	if (!hcd->rh_registered)
+		return;
+
 	if (hcd->driver->shutdown)
 		hcd->driver->shutdown(hcd);
 }
@@ -206,6 +234,9 @@ static int exynos_ohci_suspend(struct device *dev)
 	struct exynos4_ohci_platdata *pdata = pdev->dev.platform_data;
 	unsigned long flags;
 	int rc = 0;
+
+	if (exynos_ohci->phy)
+		return 0;
 
 	/*
 	 * Root hub was already suspended. Disable irq emission and
@@ -236,6 +267,9 @@ static int exynos_ohci_resume(struct device *dev)
 	struct usb_hcd *hcd = exynos_ohci->hcd;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct exynos4_ohci_platdata *pdata = pdev->dev.platform_data;
+
+	if (exynos_ohci->phy)
+		return 0;
 
 	if (pdata && pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_HOST);

@@ -84,7 +84,11 @@ extern struct platform_device s5p_device_fimc_md;
 extern struct platform_device s5p_device_jpeg;
 extern struct platform_device s5p_device_g2d;
 extern struct platform_device s5p_device_fimd0;
+extern struct platform_device s5p_device_fimd1;
+extern struct platform_device s5p_device_mipi_dsim;
+extern struct platform_device s5p_device_dp;
 extern struct platform_device s5p_device_hdmi;
+extern struct platform_device s5p_device_cec;
 extern struct platform_device s5p_device_i2c_hdmiphy;
 extern struct platform_device s5p_device_mfc;
 extern struct platform_device s5p_device_mfc_l;
@@ -94,6 +98,8 @@ extern struct platform_device s5p_device_mipi_csis1;
 extern struct platform_device s5p_device_mixer;
 extern struct platform_device s5p_device_onenand;
 extern struct platform_device s5p_device_sdo;
+extern struct platform_device s5p_device_ace;
+extern struct platform_device s5p_device_jpeg;
 
 extern struct platform_device s5p6440_device_iis;
 extern struct platform_device s5p6440_device_pcm;
@@ -133,12 +139,38 @@ extern struct platform_device exynos4_device_pcm1;
 extern struct platform_device exynos4_device_pcm2;
 extern struct platform_device exynos4_device_pd[];
 extern struct platform_device exynos4_device_spdif;
-extern struct platform_device exynos4_device_sysmmu;
+extern struct platform_device exynos_device_ss_udc;
+
+extern struct platform_device exynos5_device_dwmci0;
+extern struct platform_device exynos5_device_dwmci1;
+extern struct platform_device exynos5_device_dwmci2;
+extern struct platform_device exynos5_device_dwmci3;
+extern struct platform_device exynos5_device_pcm0;
+extern struct platform_device exynos5_device_pcm1;
+extern struct platform_device exynos5_device_pcm2;
+extern struct platform_device exynos5_device_srp;
+extern struct platform_device exynos5_device_i2s0;
+extern struct platform_device exynos5_device_i2s1;
+extern struct platform_device exynos5_device_i2s2;
+extern struct platform_device exynos5_device_spdif;
+extern struct platform_device exynos_device_flite0;
+extern struct platform_device exynos_device_flite1;
+extern struct platform_device exynos5_device_rotator;
+
+extern struct platform_device exynos5_device_gsc0;
+extern struct platform_device exynos5_device_gsc1;
+extern struct platform_device exynos5_device_gsc2;
+extern struct platform_device exynos5_device_gsc3;
+extern struct platform_device exynos5_device_fimc_is;
 
 extern struct platform_device samsung_asoc_dma;
 extern struct platform_device samsung_asoc_idma;
 extern struct platform_device samsung_device_keypad;
 
+extern struct platform_device s5p_device_fimg2d;
+#ifdef CONFIG_MALI_MIDGARD
+extern struct platform_device exynos5_device_g3d;
+#endif
 /* s3c2440 specific devices */
 
 #ifdef CONFIG_CPU_S3C2440

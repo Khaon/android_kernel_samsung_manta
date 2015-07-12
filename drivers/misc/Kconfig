@@ -267,6 +267,17 @@ config CS5535_CLOCK_EVENT_SRC
 	  MFGPTs have a better resolution and max interval than the
 	  generic PIT, and are suitable for use as high-res timers.
 
+config HAPTIC_ISA1200
+	tristate "Imagis ISA1200 Haptic Controller"
+	depends on I2C && ANDROID_TIMED_OUTPUT && HAVE_PWM
+	default n
+	help
+	  If you say yes here you get support for the Imagis ISA1200 haptic
+	  controller. ISA1200 is a haptic motor driver with register based
+	  architecture, allowing for I2C control.
+	  This driver provides haptic motor control and is accessed as a
+	  timed output device.
+
 config HP_ILO
 	tristate "Channel interface driver for the HP iLO processor"
 	depends on PCI
@@ -303,6 +314,16 @@ config SGI_GRU_DEBUG
 	---help---
 	This option enables addition debugging code for the SGI GRU driver. If
 	you are unsure, say N.
+
+config SAMSUNG_JACK
+	bool "3.5MM ear jack driver for Samsung devices"
+	depends on INPUT
+	depends on SWITCH
+	default n
+	---help---
+	This is 3.5MM ear jack driver for Samsung devices.
+
+	If unsure, say N.
 
 config APDS9802ALS
 	tristate "Medfield Avago APDS9802 ALS Sensor module"
@@ -382,6 +403,14 @@ config HMC6352
 	  This driver provides support for the Honeywell HMC6352 compass,
 	  providing configuration and heading data via sysfs.
 
+config SENSORS_AK8975
+	tristate "AK8975 compass support"
+	default n
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8975.
+
 config EP93XX_PWM
 	tristate "EP93xx PWM support"
 	depends on ARCH_EP93XX
@@ -424,6 +453,10 @@ config TI_DAC7512
 
 	  This driver can also be built as a module. If so, the module
 	  will be called ti_dac7512.
+
+config UID_STAT
+	bool "UID based statistics tracking exported to /proc/uid_stat"
+	default n
 
 config VMWARE_BALLOON
 	tristate "VMware Balloon Driver"
@@ -497,6 +530,29 @@ config MAX8997_MUIC
 	  If you say yes here you get support for the MUIC device of
 	  Maxim MAX8997 PMIC.
 	  The MAX8997 MUIC is a USB port accessory detector and switch.
+
+config WL127X_RFKILL
+	tristate "Bluetooth power control driver for TI wl127x"
+	depends on RFKILL
+	default n
+	---help---
+	 Creates an rfkill entry in sysfs for power control of Bluetooth
+	 TI wl127x chips.
+
+config STMPE811_ADC
+	tristate "STMPE811 ADC driver"
+	depends on I2C
+	help
+	 If you say yes here you get support for the STMicroelectronics
+	 STMPE811 8 channel ADC driver.
+
+config AUDIENCE_ES305
+	tristate "Audience ES305 Voice Processor"
+	depends on I2C
+	default n
+	help
+	  The ES305 is a Voice Processor with integrated DSP that processes
+	  i2s audio data to provide noise suppression and echo cancellation.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

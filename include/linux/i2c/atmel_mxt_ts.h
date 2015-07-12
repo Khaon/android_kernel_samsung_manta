@@ -39,6 +39,10 @@ struct mxt_platform_data {
 	unsigned int voltage;
 	unsigned char orient;
 	unsigned long irqflags;
+	unsigned char boot_address;
+	const char *firmware_name;
+	unsigned int gpio_reset;
+	unsigned int reset_msec;
 };
 
 #endif /* __LINUX_ATMEL_MXT_TS_H */

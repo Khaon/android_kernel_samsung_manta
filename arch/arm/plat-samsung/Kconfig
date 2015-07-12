@@ -281,6 +281,30 @@ config S3C24XX_PWM
 	  Support for exporting the PWM timer blocks via the pwm device
 	  system
 
+config S5P_DEV_MIPI_DSIM
+	bool
+	depends on FB_MIPI_DSIM
+	default y
+	help
+	  Compile in platform device definitions for MIPI_DSIM
+	  to support mainlile style fimd
+
+config S5P_DEV_DP
+	bool
+	help
+	  Compile in platform device definitions for DP controller
+
+config S5P_DEV_FIMG2D
+	bool
+	help
+	  Compile in platform device definitions for FIMG2D controller
+
+config S5P_DEV_BTS
+	bool
+	default n
+	help
+	  Compile in platform device definitions for BTS devices
+
 # DMA
 
 config S3C_DMA
@@ -291,7 +315,7 @@ config S3C_DMA
 config SAMSUNG_DMADEV
 	bool
 	select DMADEVICES
-	select PL330_DMA if (CPU_EXYNOS4210 || CPU_S5PV210 || CPU_S5PC100 || \
+	select PL330_DMA if (ARCH_EXYNOS5 || ARCH_EXYNOS4 || CPU_S5PV210 || CPU_S5PC100 || \
 					CPU_S5P6450 || CPU_S5P6440)
 	select ARM_AMBA
 	help
@@ -350,14 +374,6 @@ config SAMSUNG_WAKEMASK
 	  Compile support for wakeup-mask controls found on the S3C6400
 	  and above. This code allows a set of interrupt to wakeup-mask
 	  mappings. See <plat/wakeup-mask.h>
-
-comment "Power Domain"
-
-config SAMSUNG_PD
-	bool "Samsung Power Domain"
-	depends on PM_RUNTIME
-	help
-	  Say Y here if you want to control Power Domain by Runtime PM.
 
 config DEBUG_S3C_UART
 	depends on PLAT_SAMSUNG

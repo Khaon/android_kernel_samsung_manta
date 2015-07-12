@@ -394,6 +394,14 @@ config LEDS_MAX8997
 	  This option enables support for on-chip LED drivers on
 	  MAXIM MAX8997 PMIC.
 
+config LEDS_AS3668
+	tristate "LED Support for Austriamicrosystems AS3668"
+	depends on LEDS_CLASS && LEDS_TRIGGERS && I2C
+	help
+	  This option enables support for LEDs connected to Austriamicrosystems
+	  AS3668 led controller accessed via the I2C bus.
+	  Brightness control and hardware-assisted blinking are supported.
+
 config LEDS_OT200
 	tristate "LED support for the Bachmann OT200"
 	depends on LEDS_CLASS && HAS_IOMEM
@@ -467,6 +475,12 @@ config LEDS_TRIGGER_DEFAULT_ON
 	help
 	  This allows LEDs to be initialised in the ON state.
 	  If unsure, say Y.
+
+config LEDS_TRIGGER_SLEEP
+	tristate "LED Sleep Mode Trigger"
+	depends on LEDS_TRIGGERS && HAS_EARLYSUSPEND
+	help
+	  This turns LEDs on when the screen is off but the cpu still running.
 
 comment "iptables trigger is under Netfilter config (LED target)"
 	depends on LEDS_TRIGGERS

@@ -37,6 +37,7 @@ struct clk_ops {
 	unsigned long	    (*get_rate)(struct clk *c);
 	unsigned long	    (*round_rate)(struct clk *c, unsigned long rate);
 	int		    (*set_parent)(struct clk *c, struct clk *parent);
+	struct clk *	    (*get_parent)(struct clk *c);
 };
 
 struct clk {
@@ -57,6 +58,8 @@ struct clk {
 	struct dentry		*dent;	/* For visible tree hierarchy */
 #endif
 };
+
+struct clk *__clk_get_parent(struct clk*);
 
 /* other clocks which may be registered by board support */
 
@@ -88,6 +91,7 @@ extern struct clk clk_h2;
 extern struct clk clk_27m;
 extern struct clk clk_48m;
 extern struct clk clk_xusbxti;
+extern struct clk clk_xxti;
 
 extern int clk_default_setrate(struct clk *clk, unsigned long rate);
 extern struct clk_ops clk_ops_def_setrate;
