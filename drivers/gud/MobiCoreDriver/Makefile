@@ -14,7 +14,7 @@ ifdef MOBICORE_CFLAGS
 endif
 #EXTRA_CFLAGS+=-DDEBUG_VERBOSE
 
-ccflags-y += -include $(M)/build_tag.h -Wall
+ccflags-y += -include $(srctree)/$(M)/build_tag.h -Wall
 # add our module to kernel.
 obj-m += mcDrvModule.o
 
