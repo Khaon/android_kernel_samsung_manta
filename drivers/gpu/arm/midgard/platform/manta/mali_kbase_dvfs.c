@@ -168,19 +168,11 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 	spin_lock_irqsave(&mali_dvfs_spinlock, flags);
-	if (dvfs_status->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold) {
-		if (dvfs_status->step==kbase_platform_dvfs_get_level(450)) {
-			if (platform->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold)
-				dvfs_status->step++;
-			BUG_ON(dvfs_status->step >= MALI_DVFS_STEP);
-		} else {
-			dvfs_status->step++;
-			BUG_ON(dvfs_status->step >= MALI_DVFS_STEP);
-		}
-	} else if ((dvfs_status->step > 0) && (platform->time_tick == MALI_DVFS_TIME_INTERVAL) && (platform->utilisation < mali_dvfs_infotbl[dvfs_status->step].min_threshold)) {
-		BUG_ON(dvfs_status->step <= 0);
-		dvfs_status->step--;
-	}
+	if ((dvfs_status->utilisation > mali_dvfs_infotbl[dvfs_status->step].max_threshold) && (dvfs_status->step < MALI_DVFS_STEP))
+		dvfs_status->step++;
+	else if ((dvfs_status->step > 0) && (platform->time_tick == MALI_DVFS_TIME_INTERVAL)
+		&& (platform->utilisation < mali_dvfs_infotbl[dvfs_status->step].min_threshold))
+		dvfs_status->step--;	
 #ifdef CONFIG_MALI_MIDGARD_FREQ_LOCK
 	if ((dvfs_status->upper_lock >= 0) && (dvfs_status->step > dvfs_status->upper_lock)) {
 		dvfs_status->step = dvfs_status->upper_lock;

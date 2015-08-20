@@ -157,43 +157,16 @@ void kbase_device_runtime_disable(struct kbase_device *kbdev)
 	pm_runtime_disable(kbdev->dev);
 }
 
-static int pm_callback_runtime_on(struct kbase_device *kbdev)
-{
-#ifdef CONFIG_MALI_MIDGARD_DVFS
-	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
-#endif
-	kbase_platform_clock_on(kbdev);
-#ifdef CONFIG_MALI_MIDGARD_DVFS
-	if (platform->dvfs_enabled) {
-		if (kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ)!= MALI_TRUE)
-			return -EPERM;
-	} else {
-		if (kbase_platform_dvfs_enable(false, MALI_DVFS_CURRENT_FREQ)!= MALI_TRUE)
-			return -EPERM;
-	}
-#endif
-	return 0;
-}
-
-static void pm_callback_runtime_off(struct kbase_device *kbdev)
-{
-	kbase_platform_clock_off(kbdev);
-#ifdef CONFIG_MALI_MIDGARD_DVFS
-	if (kbase_platform_dvfs_enable(false, MALI_DVFS_CURRENT_FREQ)!= MALI_TRUE)
-		printk("[err] disabling dvfs is faled\n");
-#endif
-}
-
 static void pm_callback_resume(struct kbase_device *kbdev)
 {
-	int ret = pm_callback_runtime_on(kbdev);
+	int ret = kbase_platform_dvfs_enable(true, MALI_DVFS_START_FREQ);
 
 	WARN_ON(ret);
 }
 
 static void pm_callback_suspend(struct kbase_device *kbdev)
 {
-	pm_callback_runtime_off(kbdev);
+	kbase_platform_dvfs_enable(false, 100);
 }
 
 static struct kbase_pm_callback_conf pm_callbacks = {
@@ -204,8 +177,8 @@ static struct kbase_pm_callback_conf pm_callbacks = {
 #ifdef CONFIG_PM_RUNTIME
 	.power_runtime_init_callback = kbase_device_runtime_init,
 	.power_runtime_term_callback = kbase_device_runtime_disable,
-	.power_runtime_on_callback = pm_callback_runtime_on,
-	.power_runtime_off_callback = pm_callback_runtime_off,
+	.power_runtime_on_callback = NULL,
+	.power_runtime_off_callback = NULL,
 #else				/* CONFIG_PM_RUNTIME */
 	.power_runtime_init_callback = NULL,
 	.power_runtime_term_callback = NULL,
