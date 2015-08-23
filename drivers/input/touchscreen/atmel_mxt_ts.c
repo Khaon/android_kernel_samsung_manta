@@ -731,6 +731,10 @@ static void mxt_input_report(struct mxt_data *data)
 	input_sync(input_dev);
 }
 
+inline u64 get_last_input_time(void) {
+	return last_input_time;
+}
+
 static void mxt_input_touchevent(struct mxt_data *data,
 				      struct mxt_message *message, int id)
 {
@@ -742,6 +746,7 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	int area;
 	int pressure;
 	int vector;
+	u64 current_time;
 
 	if (id >= MXT_MAX_FINGER) {
 		dev_err(dev, "MXT_MAX_FINGER exceeded!\n");
@@ -787,6 +792,12 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	finger[id].pressure = pressure;
 	finger[id].vector = vector;
 
+	if (status & MXT_PRESS) {
+		current_time = ktime_to_us(ktime_get());
+		if(last_input_time + DEFAULT_BOOST_TIME_OUT < current_time) {
+			last_input_time = current_time;
+		}
+	}
 	mxt_input_report(data);
 }
 

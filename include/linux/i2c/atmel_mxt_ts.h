@@ -25,6 +25,9 @@
 #define MXT_ROTATED_180		0x6
 #define MXT_DIAGONAL_COUNTER	0x7
 
+#define DEFAULT_BOOST_TIME_OUT	350 * (USEC_PER_MSEC)
+static u64 last_input_time = 0;
+
 /* The platform data for the Atmel maXTouch touchscreen driver */
 struct mxt_platform_data {
 	const u8 *config;
@@ -44,5 +47,7 @@ struct mxt_platform_data {
 	unsigned int gpio_reset;
 	unsigned int reset_msec;
 };
+
+u64 get_last_input_time(void);
 
 #endif /* __LINUX_ATMEL_MXT_TS_H */
