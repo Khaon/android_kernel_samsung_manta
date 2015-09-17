@@ -26,23 +26,23 @@
 #include <linux/sched.h>
 #include <linux/input.h>
 #include <linux/slab.h>
-#include <linux/touchboost.h>
+#include <linux/i2c/atmel_mxt_ts.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(95)
-#define DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG	(99)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(90)
-#define DEF_FREQUENCY_DOWN_THRESHOLD_HOTPLUG	(45)
+#define DEF_FREQUENCY_UP_THRESHOLD		(75)
+#define DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG	(90)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(45)
+#define DEF_FREQUENCY_DOWN_THRESHOLD_HOTPLUG	(20)
 #define DEF_DISABLE_HOTPLUGGING			(1)
-#define DEF_UP_FREQ_THRESHOLD_HOTPLUG 		(1200000)
-#define DEF_DOWN_FREQ_THRESHOLD_HOTPLUG 	(800000)
+#define DEF_UP_FREQ_THRESHOLD_HOTPLUG 		(700000)
+#define DEF_DOWN_FREQ_THRESHOLD_HOTPLUG 	(400000)
 #define DEF_BOOST_CPU				(1400000)
 #define DEF_BOOST_CPU_TURN_ON_2ND_CORE		(1)
-#define DEF_BOOST_HOLD_CYCLES			(4)
+#define DEF_BOOST_HOLD_CYCLES			(7)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -71,15 +71,6 @@ static unsigned int boost_hold_cycles_cnt = 0;
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
-
-#define MIN_TIME_INTERVAL_US (250 * USEC_PER_MSEC)
-
-/*
- * Use this variable in your governor of choice to calculate when the cpufreq
- * core is allowed to ramp the cpu down after an input event. That logic is done
- * by you, this var only outputs the last time in us an event was captured
- */
-static u64 last_input_time = 0;
 
 struct work_struct hotplug_offline_work;
 struct work_struct hotplug_online_work;
@@ -639,7 +630,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	now = ktime_to_us(ktime_get());
 
-	if (now < (get_input_time() + dbs_tuners_ins.block_cycles_boost * dbs_tuners_ins.sampling_rate))
+	if (now < (get_last_input_time() + dbs_tuners_ins.block_cycles_boost * dbs_tuners_ins.sampling_rate))
 	{
 		this_dbs_info->down_skip = 0;
 		/* if we are already at an higher speed no need to change */
