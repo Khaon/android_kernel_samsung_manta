@@ -907,7 +907,7 @@ static ssize_t show_boost_time_duration(struct device *dev, struct device_attrib
 	if (!kbdev)
 		return -ENODEV;
 
-	ret = snprintf(buf, PAGE_SIZE - ret, "Current gpu boost duration is %dmsecs", kbase_platform_dvfs_get_boost_time_duration() / USEC_PER_MSEC);
+	ret = snprintf(buf, PAGE_SIZE - ret, "Current gpu boost duration is %dmsecs\n", kbase_platform_dvfs_get_boost_time_duration() / USEC_PER_MSEC);
 
 	return ret;
 }
