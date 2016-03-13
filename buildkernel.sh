@@ -41,11 +41,11 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 
 	echo "${txtbld} Make AnyKernel flashable archive ${txtrst} "
 	echo "";
-	rm UPDATE-AnyKernel2-khaon-kernel-manta-marshmallow*.zip;
+	rm UPDATE-AnyKernel2-khaon-kernel-manta-marshmallow-v3.4.110-*.zip;
 	cd $ANY_KERNEL;
 	cp $KERNELDIR/arch/arm/boot/zImage zImage;
 	mkdir -p $PACKAGEDIR;
-	zip -r9 $PACKAGEDIR/UPDATE-AnyKernel2-khaon-kernel-manta-marshmallow-"${curdate}".zip * -x README UPDATE-AnyKernel2.zip .git *~;
+	zip -r9 $PACKAGEDIR/UPDATE-AnyKernel2-khaon-kernel-manta-marshmallow-v3.4.110-"${curdate}".zip * -x README UPDATE-AnyKernel2.zip .git *~;
 	cd $KERNELDIR;
 else
 	echo "KERNEL DID NOT BUILD! no zImage exist"
